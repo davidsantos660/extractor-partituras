@@ -10,7 +10,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # Comprobar si el usuario subió un archivo
         if 'video' not in request.files:
             return redirect(request.url)
         
@@ -22,22 +21,18 @@ def index():
         es_horizontal = True if formato == '2' else False
         
         if file:
-            # Guardar el vídeo temporalmente en el servidor
             video_path = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(video_path)
             
             pdf_filename = "tu_partitura.pdf"
             pdf_path = os.path.join(UPLOAD_FOLDER, pdf_filename)
             
-            # Ejecutar tu herramienta musical
             exito = procesar_video_partitura(video_path, pdf_path, formato_horizontal=es_horizontal)
             
-            # Borrar el vídeo para no saturar el disco del servidor
             if os.path.exists(video_path):
                 os.remove(video_path)
                 
             if exito:
-                # Descargar el PDF automáticamente en el navegador del usuario
                 return send_file(pdf_path, as_attachment=True)
             else:
                 return "Error al procesar el vídeo musical."
@@ -45,8 +40,6 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    # Lee el puerto que le asigna Render en internet, si no, usa el 5000 de casa
+    # FORZADO DE PUERTO DINÁMICO PARA INTERNET
     puerto = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=puerto)
-
-    
