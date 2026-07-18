@@ -45,4 +45,8 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Lee el puerto que le asigna Render en internet, si no, usa el 5000 de casa
+    puerto = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=puerto)
+
+    
