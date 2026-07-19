@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>SheetMusic Extractor Pro</title>
 </head>
-<body style="background-color:#0f172a; color:#f8fafc; font-family:sans-serif; margin:0; padding:0;">
+<body style="background-color:#0f172a; color:#f8fafc; font-family:sans-serif; margin:0; padding:0; min-height:100vh; display:flex; flex-direction:column; justify-content:space-between;">
 
     <header style="background-color:#1e293b; padding:16px 32px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
         <h1 style="font-size:22px; margin:0;">🎵 SheetMusic <span style="color:#10b981;">Pro</span></h1>
@@ -14,29 +14,27 @@
                 {% if es_pro %}
                     <span style="background-color:#10b981; color:#0f172a; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">PRO MEMBER</span>
                 {% elif creditos > 0 %}
-                    <a href="/comprar/pack" style="color:#10b981; text-decoration:none; font-weight:600;">Pack 5 PDFs (€4.95)</a>
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600;">Upgrade to Pro (€2.99/mo)</a>
+                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Upgrade to Pro (€2.99/mo)</a>
                     <span style="background-color:#3b82f6; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} CREDITS LEFT</span>
                 {% else %}
-                    <a href="/comprar/credito" style="color:#94a3b8; text-decoration:none;">1 PDF (€0.95)</a>
-                    <a href="/comprar/pack" style="color:#10b981; text-decoration:none; font-weight:600;">Pack 5 PDFs (€4.95)</a>
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600;">Upgrade to Pro (€2.99/mo)</a>
+                    <a href="/comprar/credito" style="color:#94a3b8; text-decoration:none; font-size:14px;">1 PDF (€0.95)</a>
+                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Upgrade to Pro (€2.99/mo)</a>
                     <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">FREE ACCOUNT</span>
                 {% endif %}
-                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px;">Sign Out</a>
+                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Sign Out</a>
             {% else %}
-                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px;">Log In</a>
-                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600;">Sign Up</a>
+                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px; font-size:14px;">Log In</a>
+                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Sign Up</a>
             {% endif %}
         </div>
     </header>
 
-    <main style="max-width:550px; margin:40px auto; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155;">
+    <main style="width:100%; max-width:550px; margin:40px auto; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155; flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
         <form action="/" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
             <div style="margin-bottom:20px;">
                 <label style="display:block; font-size:14px; margin-bottom:8px;">1. Sube tu vídeo de la partitura</label>
                 <div style="border:2px dashed #334155; padding:20px; text-align:center; border-radius:12px; cursor:pointer; background-color:rgba(51,65,85,0.3);" onclick="document.getElementById('video-input').click()">
-                    <p id="texto-subida" style="margin:0;">Haz clic para buscar tu archivo de vídeo</p>
+                    <p id="texto-subida" style="margin:0; font-size:14px; color:#94a3b8;">Haz clic para buscar tu archivo de vídeo</p>
                     <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
                 </div>
             </div>
@@ -50,11 +48,11 @@
                 <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
                     <div style="margin-bottom:10px;">
                         <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
-                        <input type="range" name="corte_sup" id="corte_sup" min="0" max="80" value="0" style="width:100%;" oninput="actualizarCorte()">
+                        <input type="range" name="corte_sup" id="corte_sup" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
                     </div>
                     <div>
                         <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
-                        <input type="range" name="corte_inf" id="corte_inf" min="0" max="80" value="0" style="width:100%;" oninput="actualizarCorte()">
+                        <input type="range" name="corte_inf" id="corte_inf" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
                     </div>
                 </div>
             </div>
@@ -72,7 +70,7 @@
         </form>
     </main>
 
-    <footer style="padding:12px; text-align:center; font-size:11px; color:#475569; background-color:#020617;">Hecho por músicos para músicos.</footer>
+    <footer style="padding:16px; text-align:center; font-size:11px; color:#475569; background-color:#020617; border-top:1px solid #1e293b;">Hecho por músicos para músicos.</footer>
     <video id="video-oculto" style="display:none;"></video>
 
     <script>
@@ -83,8 +81,8 @@
 
         function procesarVideoLocal(e) {
             const f = e.target.files; if (!f || f.length === 0) return;
-            document.getElementById('texto-subida').innerText = f[0].name;
-            videoOculto.src = URL.createObjectURL(f[0]); videoOculto.load();
+            document.getElementById('texto-subida').innerText = f.name;
+            videoOculto.src = URL.createObjectURL(f); videoOculto.load();
             videoOculto.onloadedmetadata = () => { videoOculto.currentTime = 15; };
             videoOculto.onseeked = () => {
                 canvas.width = videoOculto.videoWidth; canvas.height = videoOculto.videoHeight;
@@ -118,4 +116,3 @@
     </script>
 </body>
 </html>
-
