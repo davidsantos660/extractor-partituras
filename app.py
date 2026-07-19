@@ -13,10 +13,12 @@ DATABASE = 'database.db'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # =====================================================================
-# CONFIGURACIÓN DE STRIPE (CLAVES OFICIALES DE TU ENTORNO DE PRUEBA)
+# CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
 # =====================================================================
-stripe.api_key = "sk_test_51TuvEk7UnizDpWnXSYni8HOm1f18WWp4KH69T51QZRjo4H81Ip14u3P2EhT6EieYG6zk53JuYbvTe9EBErh4jjT500Jte1ldIe"
-STRIPE_PUBLISHABLE_KEY = "pk_test_51TuvEk7UnizDpWnXXiITsfJOJpnTADkYL1qaSaMspYwUHMaD698eZv3kef1s5t55OSbJ7G4pB1MReornninkLA8fa00YFj12gL8"
+# En producción (Render), el servidor leerá de forma privada las claves secretas.
+# Si estás en local (tu PC) y no detecta variables de entorno reales, usará tus claves de prueba gratuitas automáticamente.
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_51TuvEk7UnizDpWnXSYni8HOm1f18WWp4KH69T51QZRjo4H81Ip14u3P2EhT6EieYG6zk53JuYbvTe9EBErh4jjT500Jte1ldIe")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "pk_test_51TuvEk7UnizDpWnXXiITsfJOJpnTADkYL1qaSaMspYwUHMaD698eZv3kef1s5t55OSbJ7G4pB1MReornninkLA8fa00YFj12gL8")
 
 # =====================================================================
 # MOTOR DE BASE DE DATOS (SQLite)
@@ -106,9 +108,6 @@ def index():
                 
     return render_template('index.html', usuario_premium=usuario_premium, creditos=creditos_actuales)
 
-# ---------------------------------------------------------------------
-# PASARELA DE PAGOS: CREAR CHECKOUT DE STRIPE
-# ---------------------------------------------------------------------
 @app.route('/comprar/<tipo>')
 def comprar(tipo):
     if 'user_email' not in session:
@@ -146,9 +145,6 @@ def comprar(tipo):
     except Exception as e:
         return f"Error al conectar con la pasarela de Stripe: {e}"
 
-# ---------------------------------------------------------------------
-# CONFIRMACIÓN: ACTUALIZAR PRIVILEGIOS TRAS EL PAGO
-# ---------------------------------------------------------------------
 @app.route('/pago-exitoso/<tipo>')
 def pago_exitoso(tipo):
     if 'user_email' not in session:
@@ -173,9 +169,6 @@ def pago_exitoso(tipo):
         </div>
     '''
 
-# ---------------------------------------------------------------------
-# AUTH: REGISTRO E INICIO DE SESIÓN
-# ---------------------------------------------------------------------
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
