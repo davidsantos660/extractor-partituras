@@ -49,14 +49,13 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     skip_frames = int(fps * SALTAR_SEGUNDOS)
     prev_frame_gray = None
     
-    # Reducimos las dimensiones máximas del PDF para ahorrar un 60% de uso de RAM en el renderizado
     if formato_horizontal:
-        ANCHO_PAGINA, ALTO_PAGINA = 2480, 1754  # Resolución A4 apaisada optimizada
+        ANCHO_PAGINA, ALTO_PAGINA = 2480, 1754  
         MARGEN_LADO, MARGEN_TECHO, ESPACIO_HORIZONTAL, ESPACIO_VERTICAL = 70, 70, 35, 35
         ancho_util = ANCHO_PAGINA - (MARGEN_LADO * 2)
         ancho_bloque = int((ancho_util - (ESPACIO_HORIZONTAL * (PENTAGRAMAS_POR_FILA - 1))) / PENTAGRAMAS_POR_FILA)
     else:
-        ANCHO_PAGINA, ALTO_PAGINA = 1754, 2480  # Resolución A4 vertical optimizada
+        ANCHO_PAGINA, ALTO_PAGINA = 1754, 2480  
         MARGEN_LADO, MARGEN_TECHO, ESPACIO_VERTICAL = 100, 45, 12
         ancho_bloque = ANCHO_PAGINA - (MARGEN_LADO * 2)
 
@@ -67,16 +66,17 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     if not ret_init or frame_init is None:
         return False
     alto, ancho = frame_init.shape[:2]
+    
+    # MODIFICADO: Adaptación de la regla de seguridad matemática para tolerar recortes de hasta el 90%
     y1 = int(alto * (corte_sup / 100))
     y2 = int(alto * ((100 - corte_inf) / 100))
-    if y1 >= y2:
+    if y1 >= y2 or y1 >= alto or y2 <= 0:
         y1, y2 = 0, alto
         
     segundo_inicio = 4
     count = int(fps * segundo_inicio)
     cap.set(cv2.CAP_PROP_POS_FRAMES, count)
 
-    # OPTIMIZACIÓN CENTRAL: Procesamiento en Streaming dentro del bucle sin guardar frames completos en RAM
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret or frame is None:
@@ -156,18 +156,14 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     paginas_creadas.append(pagina_actual)
 
     if not es_premium:
-        # Se elimina el filtro pesado de GaussianBlur de radio alto que colgaba la CPU de Render
         fuente_footer = ImageFont.load_default()
             
         for idx in range(len(paginas_creadas)):
             if idx >= 1:
-                # OPTIMIZACIÓN: Marca de agua ligera en lugar de desenfocar de forma masiva
                 draw = ImageDraw.Draw(paginas_creadas[idx])
-                # Dibujamos una cruz gigante translúcida o un mensaje gris claro de bloqueo en el centro
                 msg_centro = "🔒 PRO VERSION REQUIRED TO UNLOCK FULL PAGES"
                 draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA // 2), msg_centro, fill=(203, 213, 225), font=fuente_footer, anchor="mm")
                 
-                # Footer estándar
                 msg_intl = "🔒 To unlock the complete high-resolution sheet music, please subscribe to Pro."
                 draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA - 80), msg_intl, fill=(71, 85, 105), font=fuente_footer, anchor="mm")
 
