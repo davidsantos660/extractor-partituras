@@ -36,6 +36,7 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
         i2 = img2.resize((100, 30)).convert("L")
         a1, a2 = np.array(i1, dtype=np.float32), np.array(i2, dtype=np.float32)
         matriz_correlacion = np.corrcoef(a1.flatten(), a2.flatten())
+        # CORRECCIÓN CRÍTICA: Acceso correcto al valor numérico de la matriz de correlación
         if matriz_correlacion.ndim > 1:
             valor_correlacion = float(matriz_correlacion[0, 1])
         else:
@@ -67,7 +68,6 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
         return False
     alto, ancho = frame_init.shape[:2]
     
-    # MODIFICADO: Adaptación de la regla de seguridad matemática para tolerar recortes de hasta el 90%
     y1 = int(alto * (corte_sup / 100))
     y2 = int(alto * ((100 - corte_inf) / 100))
     if y1 >= y2 or y1 >= alto or y2 <= 0:
@@ -169,6 +169,7 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
 
     if paginas_creadas and len(paginas_creadas) > 0:
         try:
+            # CORRECCIÓN CRÍTICA: Extraer el primer objeto de la lista para el método .save()
             primera_pagina = paginas_creadas[0]
             resto_paginas = [img for img in paginas_creadas[1:] if isinstance(img, Image.Image)]
             primera_pagina.save(output_pdf_path, "PDF", save_all=True, append_images=resto_paginas)
