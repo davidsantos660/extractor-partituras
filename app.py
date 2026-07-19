@@ -2,11 +2,16 @@ from flask import Flask, render_template, request, send_file, redirect, url_for,
 import os
 import sqlite3
 import stripe
+from datetime import timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from core_extractor import procesar_video_partitura
 
 app = Flask(__name__)
 app.secret_key = "clave_secreta_super_segura_para_el_negocio"
+
+# Configuración para que la sesión recuerde al usuario en su navegador por 30 días
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+
 UPLOAD_FOLDER = 'uploads'
 DATABASE = 'database.db'
 
@@ -60,7 +65,6 @@ def index():
         conn.close()
         if user:
             creditos_actuales = user['creditos']
-            # El usuario es premium de forma global si es Pro o si le quedan créditos
             if user['is_pro'] == 1:
                 es_pro = True
                 usuario_premium = True
@@ -100,7 +104,6 @@ def index():
                 os.remove(video_path)
                 
             if exito:
-                # El crédito individual solo se descuenta si el usuario NO está suscrito a Pro
                 if email_usuario and user and not user['is_pro'] and user['creditos'] > 0:
                     conn = obtener_conexion_db()
                     conn.execute('UPDATE usuarios SET creditos = creditos - 1 WHERE email = ?', (email_usuario,))
@@ -180,32 +183,40 @@ def registro():
     if request.method == 'POST':
         email = request.form.get('email').strip().lower()
         password = request.form.get('password')
-        if not email or not password: return "Campos obligatorios vacíos."
+        if not email or not password: 
+            return "Campos obligatorios vacíos."
         password_encriptada = generate_password_hash(password)
         conn = obtener_conexion_db()
         try:
             conn.execute('INSERT INTO usuarios (email, password) VALUES (?, ?)', (email, password_encriptada))
             conn.commit()
+            session.permanent = True  # Activamos persistencia de sesión
             session['user_email'] = email
             return redirect(url_for('index'))
-        except sqlite3.IntegrityError: return "Este correo ya está registrado."
-        finally: conn.close()
+        except sqlite3.IntegrityError: 
+            return "Este correo ya está registrado."
+        finally: 
+            conn.close()
     return render_template('registro.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email').strip().lower()
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        
         conn = obtener_conexion_db()
         user = conn.execute('SELECT * FROM usuarios WHERE email = ?', (email,)).fetchone()
         conn.close()
         
         if user and check_password_hash(user['password'], password):
+            session.permanent = True  # Activamos persistencia de sesión
             session['user_email'] = user['email']
             return redirect(url_for('index'))
         else:
-            return "Credenciales incorrectas."
+            flash("Correo electrónico o contraseña incorrectos.")
+            return redirect(url_for('login'))
+            
     return render_template('login.html')
 
 @app.route('/logout')
