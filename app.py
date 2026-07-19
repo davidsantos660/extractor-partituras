@@ -50,6 +50,7 @@ inicializar_base_de_datos()
 @app.route('/', methods=['GET', 'POST'])
 def index():
     usuario_premium = False
+    es_pro = False
     email_usuario = session.get('user_email')
     creditos_actuales = 0
     
@@ -59,7 +60,10 @@ def index():
         conn.close()
         if user:
             creditos_actuales = user['creditos']
-            if user['is_pro'] == 1 or user['creditos'] > 0:
+            if user['is_pro'] == 1:
+                es_pro = True
+                usuario_premium = True
+            elif user['creditos'] > 0:
                 usuario_premium = True
 
     if request.method == 'POST':
@@ -104,7 +108,7 @@ def index():
             else:
                 return "Error al procesar el vídeo musical."
                 
-    return render_template('index.html', usuario_premium=usuario_premium, creditos=creditos_actuales)
+    return render_template('index.html', usuario_premium=usuario_premium, es_pro=es_pro, creditos=creditos_actuales)
 
 @app.route('/comprar/<tipo>')
 def comprar(tipo):
@@ -114,8 +118,11 @@ def comprar(tipo):
     try:
         if tipo == 'credito':
             nombre_prod = "1 Crédito de Partitura Completa"
-            # PRECIO ESTRATÉGICO MODIFICADO: Cambiado de 100 céntimos a 95 céntimos (0.95 EUR)
             precio_centimos = 95 
+            modo_pago = "payment"
+        elif tipo == 'pack':
+            nombre_prod = "Pack de 5 Créditos de Partitura"
+            precio_centimos = 495 
             modo_pago = "payment"
         elif tipo == 'suscripcion':
             nombre_prod = "Suscripción Mensual SheetMusic Pro"
@@ -154,16 +161,21 @@ def pago_exitoso(tipo):
     
     if tipo == 'credito':
         conn.execute('UPDATE usuarios SET creditos = creditos + 1 WHERE email = ?', (email,))
+        mensaje = "Has añadido 1 crédito de descarga suelta con éxito. 🎉"
+    elif tipo == 'pack':
+        conn.execute('UPDATE usuarios SET creditos = creditos + 5 WHERE email = ?', (email,))
+        mensaje = "Has añadido el Pack de 5 créditos con éxito. 🎉"
     elif tipo == 'suscripcion':
         conn.execute('UPDATE usuarios SET is_pro = 1 WHERE email = ?', (email,))
+        mensaje = "¡Te has suscrito con éxito a SheetMusic Pro! 🎉"
         
     conn.commit()
     conn.close()
     
     return f'''
         <div style="background:#0f172a;color:#f8fafc;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:sans-serif;">
-            <h2 style="color:#10b981;">¡Pago completado con éxito! 🎉</h2>
-            <p>Tu cuenta ha sido actualizada. Ya puedes disfrutar de tus ventajas premium.</p>
+            <h2 style="color:#10b981;">¡Pago completado con éxito!</h2>
+            <p>{mensaje}</p>
             <a href="{url_for('index')}" style="background:#10b981;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:20px;">Volver al Extractor</a>
         </div>
     '''
@@ -207,4 +219,3 @@ def logout():
 if __name__ == '__main__':
     puerto = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=puerto)
-
