@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>SheetMusic Extractor Pro</title>
 </head>
-<body style="background-color:#0f172a; color:#f8fafc; font-family:sans-serif; margin:0; padding:0; min-height:100vh; display:flex; flex-direction:column; justify-content:space-between;">
+<body style="background-color:#0f172a; color:#f8fafc; font-family:sans-serif; margin:0; padding:0; min-height:100vh; display:flex; flex-direction:column;">
 
     <header style="background-color:#1e293b; padding:16px 32px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
         <h1 style="font-size:22px; margin:0;">🎵 SheetMusic <span style="color:#10b981;">Pro</span></h1>
@@ -19,7 +19,7 @@
                 {% else %}
                     <a href="/comprar/credito" style="color:#94a3b8; text-decoration:none; font-size:14px;">1 PDF (€0.95)</a>
                     <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Upgrade to Pro (€2.99/mo)</a>
-                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">FREE ACCOUNT</span>
+                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">FREE ACCOUNT ({{ creditos }} CREDITS)</span>
                 {% endif %}
                 <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Sign Out</a>
             {% else %}
@@ -29,46 +29,49 @@
         </div>
     </header>
 
-    <main style="width:100%; max-width:550px; margin:40px auto; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155; flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
-        <form action="/" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
-            <div style="margin-bottom:20px;">
-                <label style="display:block; font-size:14px; margin-bottom:8px;">1. Sube tu vídeo de la partitura</label>
-                <div style="border:2px dashed #334155; padding:20px; text-align:center; border-radius:12px; cursor:pointer; background-color:rgba(51,65,85,0.3);" onclick="document.getElementById('video-input').click()">
-                    <p id="texto-subida" style="margin:0; font-size:14px; color:#94a3b8;">Haz clic para buscar tu archivo de vídeo</p>
-                    <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
-                </div>
-            </div>
-            
-            <div id="contenedor-preview" style="display:none; width:100%; border-radius:12px; border:1px solid #334155; margin-bottom:16px; overflow:hidden;">
-                <canvas id="canvas-preview" style="width:100%; display:block; height:auto;"></canvas>
-            </div>
-
-            <div style="margin-bottom:20px;">
-                <label style="display:block; font-size:14px; margin-bottom:8px;">2. Ajusta el área de la partitura</label>
-                <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
-                    <div style="margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
-                        <input type="range" name="corte_sup" id="corte_sup" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
-                    </div>
-                    <div>
-                        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
-                        <input type="range" name="corte_inf" id="corte_inf" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+    <!-- Se eliminó flex-grow y se añadió un contenedor intermedio para evitar que la tarjeta se deforme verticalmente -->
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
+        <main style="width:100%; max-width:550px; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+            <form action="/" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">1. Sube tu vídeo de la partitura</label>
+                    <div style="border:2px dashed #334155; padding:20px; text-align:center; border-radius:12px; cursor:pointer; background-color:rgba(51,65,85,0.3);" onclick="document.getElementById('video-input').click()">
+                        <p id="texto-subida" style="margin:0; font-size:14px; color:#94a3b8;">Haz clic para buscar tu archivo de vídeo</p>
+                        <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
                     </div>
                 </div>
-            </div>
+                
+                <div id="contenedor-preview" style="display:none; width:100%; border-radius:12px; border:1px solid #334155; margin-bottom:16px; overflow:hidden;">
+                    <canvas id="canvas-preview" style="width:100%; display:block; height:auto;"></canvas>
+                </div>
 
-            <div style="margin-bottom:20px;">
-                <label style="display:block; font-size:14px; margin-bottom:8px;">3. Formato de salida</label>
-                <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
-                    <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
-                    <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
-                </select>
-            </div>
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">2. Ajusta el área de la partitura</label>
+                    <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
+                        <div style="margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
+                            <input type="range" name="corte_sup" id="corte_sup" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
+                            <input type="range" name="corte_inf" id="corte_inf" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                        </div>
+                    </div>
+                </div>
 
-            <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Procesar y Descargar PDF</button>
-            <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Recortando márgenes... Esto puede tardar un minuto.</div>
-        </form>
-    </main>
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Formato de salida</label>
+                    <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
+                        <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
+                        <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Procesar y Descargar PDF</button>
+                <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Recortando márgenes... Esto puede tardar un minuto.</div>
+            </form>
+        </main>
+    </div>
 
     <footer style="padding:16px; text-align:center; font-size:11px; color:#475569; background-color:#020617; border-top:1px solid #1e293b;">Hecho por músicos para músicos.</footer>
     <video id="video-oculto" style="display:none;"></video>
@@ -79,10 +82,16 @@
         let ctx = canvas.getContext('2d');
         let fotogramaCargado = false;
 
+        function mostrarCarga() {
+            document.getElementById('btn-submit').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+        }
+
         function procesarVideoLocal(e) {
             const f = e.target.files; if (!f || f.length === 0) return;
-            document.getElementById('texto-subida').innerText = f.name;
-            videoOculto.src = URL.createObjectURL(f); videoOculto.load();
+            // CORRECCIÓN: Acceder correctamente al índice 0 de la lista de archivos
+            document.getElementById('texto-subida').innerText = f[0].name;
+            videoOculto.src = URL.createObjectURL(f[0]); videoOculto.load();
             videoOculto.onloadedmetadata = () => { videoOculto.currentTime = 15; };
             videoOculto.onseeked = () => {
                 canvas.width = videoOculto.videoWidth; canvas.height = videoOculto.videoHeight;
@@ -107,11 +116,6 @@
             document.getElementById('val-sup').innerText = document.getElementById('corte_sup').value;
             document.getElementById('val-inf').innerText = document.getElementById('corte_inf').value;
             dibujarGuias();
-        }
-
-        function mostrarCarga() {
-            document.getElementById('btn-submit').style.display = 'none';
-            document.getElementById('loading').style.display = 'block';
         }
     </script>
 </body>
