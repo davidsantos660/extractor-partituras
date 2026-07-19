@@ -36,7 +36,7 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
         i2 = img2.resize((100, 30)).convert("L")
         a1, a2 = np.array(i1, dtype=np.float32), np.array(i2, dtype=np.float32)
         matriz_correlacion = np.corrcoef(a1.flatten(), a2.flatten())
-        # CORRECCIÓN CRÍTICA: Acceso correcto al valor numérico de la matriz de correlación
+        # CORRECCIÓN REAL: Acceso seguro al índice numérico de la matriz de correlación
         if matriz_correlacion.ndim > 1:
             valor_correlacion = float(matriz_correlacion[0, 1])
         else:
@@ -51,13 +51,13 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     prev_frame_gray = None
     
     if formato_horizontal:
-        ANCHO_PAGINA, ALTO_PAGINA = 2480, 1754  
-        MARGEN_LADO, MARGEN_TECHO, ESPACIO_HORIZONTAL, ESPACIO_VERTICAL = 70, 70, 35, 35
+        ANCHO_PAGINA, ALTO_PAGINA = 1920, 1357  
+        MARGEN_LADO, MARGEN_TECHO, ESPACIO_HORIZONTAL, ESPACIO_VERTICAL = 50, 50, 25, 25
         ancho_util = ANCHO_PAGINA - (MARGEN_LADO * 2)
         ancho_bloque = int((ancho_util - (ESPACIO_HORIZONTAL * (PENTAGRAMAS_POR_FILA - 1))) / PENTAGRAMAS_POR_FILA)
     else:
-        ANCHO_PAGINA, ALTO_PAGINA = 1754, 2480  
-        MARGEN_LADO, MARGEN_TECHO, ESPACIO_VERTICAL = 100, 45, 12
+        ANCHO_PAGINA, ALTO_PAGINA = 1357, 1920  
+        MARGEN_LADO, MARGEN_TECHO, ESPACIO_VERTICAL = 70, 35, 10
         ancho_bloque = ANCHO_PAGINA - (MARGEN_LADO * 2)
 
     fragmentos_unicos = []
@@ -169,7 +169,7 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
 
     if paginas_creadas and len(paginas_creadas) > 0:
         try:
-            # CORRECCIÓN CRÍTICA: Extraer el primer objeto de la lista para el método .save()
+            # CORRECCIÓN DEFINITIVA EN EL INDIZADO [0]
             primera_pagina = paginas_creadas[0]
             resto_paginas = [img for img in paginas_creadas[1:] if isinstance(img, Image.Image)]
             primera_pagina.save(output_pdf_path, "PDF", save_all=True, append_images=resto_paginas)
@@ -186,3 +186,4 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             return False
             
     return False
+
