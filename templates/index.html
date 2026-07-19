@@ -69,7 +69,8 @@
                         <span style="color: var(--texto-secundario);">({{ creditos }} credits left)</span>
                     {% endif %}
                 {% else %}
-                    <a href="/comprar/credito" class="btn-nav btn-comprar-credito">Buy 1 PDF (€1)</a>
+                    <!-- PRECIO ACTUALIZADO: Cambiado de €1 a €0.95 en el Navbar -->
+                    <a href="/comprar/credito" class="btn-nav btn-comprar-credito">Buy 1 PDF (€0.95)</a>
                     <a href="/comprar/suscripcion" class="btn-nav btn-nav-acento">Upgrade to Pro (€2.99/mo)</a>
                     <span class="badge-cuenta">FREE ACCOUNT</span>
                 {% endif %}
@@ -106,7 +107,6 @@
             </div>
             <div class="grupo-formulario">
                 <label class="etiqueta">3. Formato de salida</label>
-                <!-- CORREGIDO: Inversión de etiquetas para adecuarlo a los estándares de lectura de los músicos -->
                 <select name="formato">
                     <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
                     <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
@@ -168,3 +168,4 @@
     </script>
 </body>
 </html>
+
