@@ -60,12 +60,11 @@ def index():
         conn.close()
         if user:
             creditos_actuales = user['creditos']
-            # CORRECCIÓN DE LOGICA: Las comprobaciones ahora son independientes
+            # El usuario es premium de forma global si es Pro o si le quedan créditos
             if user['is_pro'] == 1:
                 es_pro = True
                 usuario_premium = True
-            
-            if user['creditos'] > 0:
+            elif user['creditos'] > 0:
                 usuario_premium = True
 
     if request.method == 'POST':
@@ -101,7 +100,7 @@ def index():
                 os.remove(video_path)
                 
             if exito:
-                # Solo consume crédito suelto si el usuario NO es miembro Pro activo
+                # El crédito individual solo se descuenta si el usuario NO está suscrito a Pro
                 if email_usuario and user and not user['is_pro'] and user['creditos'] > 0:
                     conn = obtener_conexion_db()
                     conn.execute('UPDATE usuarios SET creditos = creditos - 1 WHERE email = ?', (email_usuario,))
