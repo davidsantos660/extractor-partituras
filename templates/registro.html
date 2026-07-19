@@ -30,12 +30,25 @@
         
         .enlace-cambio { display: block; margin-top: 20px; text-align: center; font-size: 14px; color: var(--texto-secundario); text-decoration: none; }
         .enlace-cambio a { color: var(--color-acento); text-decoration: none; font-weight: 600; }
+
+        /* Estilo para la caja de error inyectada integrada */
+        .alerta-error { background-color: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 20px; text-align: center; font-weight: 600; }
     </style>
 </head>
 <body>
     <main>
         <form method="POST">
             <h2>🎵 Join <span>SheetMusic Pro</span></h2>
+            
+            <!-- Bloque dinámico para renderizar los errores dentro de la interfaz de registro -->
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <div class="alerta-error">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
             <div class="grupo-formulario">
                 <label class="etiqueta">Email Address</label>
                 <input type="email" name="email" placeholder="name@domain.com" required>
