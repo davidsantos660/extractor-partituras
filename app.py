@@ -60,10 +60,12 @@ def index():
         conn.close()
         if user:
             creditos_actuales = user['creditos']
+            # CORRECCIÓN DE LOGICA: Las comprobaciones ahora son independientes
             if user['is_pro'] == 1:
                 es_pro = True
                 usuario_premium = True
-            elif user['creditos'] > 0:
+            
+            if user['creditos'] > 0:
                 usuario_premium = True
 
     if request.method == 'POST':
@@ -99,6 +101,7 @@ def index():
                 os.remove(video_path)
                 
             if exito:
+                # Solo consume crédito suelto si el usuario NO es miembro Pro activo
                 if email_usuario and user and not user['is_pro'] and user['creditos'] > 0:
                     conn = obtener_conexion_db()
                     conn.execute('UPDATE usuarios SET creditos = creditos - 1 WHERE email = ?', (email_usuario,))
@@ -119,10 +122,6 @@ def comprar(tipo):
         if tipo == 'credito':
             nombre_prod = "1 Crédito de Partitura Completa"
             precio_centimos = 95 
-            modo_pago = "payment"
-        elif tipo == 'pack':
-            nombre_prod = "Pack de 5 Créditos de Partitura"
-            precio_centimos = 495 
             modo_pago = "payment"
         elif tipo == 'suscripcion':
             nombre_prod = "Suscripción Mensual SheetMusic Pro"
@@ -162,9 +161,6 @@ def pago_exitoso(tipo):
     if tipo == 'credito':
         conn.execute('UPDATE usuarios SET creditos = creditos + 1 WHERE email = ?', (email,))
         mensaje = "Has añadido 1 crédito de descarga suelta con éxito. 🎉"
-    elif tipo == 'pack':
-        conn.execute('UPDATE usuarios SET creditos = creditos + 5 WHERE email = ?', (email,))
-        mensaje = "Has añadido el Pack de 5 créditos con éxito. 🎉"
     elif tipo == 'suscripcion':
         conn.execute('UPDATE usuarios SET is_pro = 1 WHERE email = ?', (email,))
         mensaje = "¡Te has suscrito con éxito a SheetMusic Pro! 🎉"
