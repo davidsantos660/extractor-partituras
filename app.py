@@ -15,8 +15,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # =====================================================================
 # CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
 # =====================================================================
-# En producción (Render), el servidor leerá de forma privada las claves secretas.
-# Si estás en local (tu PC) y no detecta variables de entorno reales, usará tus claves de prueba gratuitas automáticamente.
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_51TuvEk7UnizDpWnXSYni8HOm1f18WWp4KH69T51QZRjo4H81Ip14u3P2EhT6EieYG6zk53JuYbvTe9EBErh4jjT500Jte1ldIe")
 STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "pk_test_51TuvEk7UnizDpWnXXiITsfJOJpnTADkYL1qaSaMspYwUHMaD698eZv3kef1s5t55OSbJ7G4pB1MReornninkLA8fa00YFj12gL8")
 
@@ -116,7 +114,8 @@ def comprar(tipo):
     try:
         if tipo == 'credito':
             nombre_prod = "1 Crédito de Partitura Completa"
-            precio_centimos = 100 
+            # PRECIO ESTRATÉGICO MODIFICADO: Cambiado de 100 céntimos a 95 céntimos (0.95 EUR)
+            precio_centimos = 95 
             modo_pago = "payment"
         elif tipo == 'suscripcion':
             nombre_prod = "Suscripción Mensual SheetMusic Pro"
