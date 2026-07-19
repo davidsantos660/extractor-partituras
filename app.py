@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash
 import os
-import sqlite3
+import psycopg2
+import psycopg2.extras  # CORRECCIÓN CRÍTICA: Importación explícita para que DictCursor funcione
 import stripe
 from datetime import timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,22 +14,19 @@ app.secret_key = "clave_secreta_super_segura_para_el_negocio"
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 UPLOAD_FOLDER = 'uploads'
-DATABASE = 'database.db'
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # =====================================================================
-# CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
+# CONFIGURACIÓN DE LAS BASES DE DATOS (POSTGRESQL / NEON)
 # =====================================================================
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_51TuvEk7UnizDpWnXSYni8HOm1f18WWp4KH69T51QZRjo4H81Ip14u3P2EhT6EieYG6zk53JuYbvTe9EBErh4jjT500Jte1ldIe")
-STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "pk_test_51TuvEk7UnizDpWnXXiITsfJOJpnTADkYL1qaSaMspYwUHMaD698eZv3kef1s5t55OSbJ7G4pB1MReornninkLA8fa00YFj12gL8")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://localhost/sheetmusic_db")
 
-# =====================================================================
-# MOTOR DE BASE DE DATOS (SQLite)
-# =====================================================================
 def obtener_conexion_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
+    # CORRECCIÓN CRÍTICA: Forzar sslmode='require' para evitar que Neon rechace la conexión segura
+    if "localhost" not in DATABASE_URL:
+        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+    else:
+        conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def inicializar_base_de_datos():
@@ -36,17 +34,24 @@ def inicializar_base_de_datos():
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            is_pro INTEGER DEFAULT 0,
-            creditos INTEGER DEFAULT 0
+            is_pro INT DEFAULT 0,
+            creditos INT DEFAULT 0
         )
     ''')
     conn.commit()
+    cursor.close()
     conn.close()
 
 inicializar_base_de_datos()
+
+# =====================================================================
+# CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
+# =====================================================================
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_51TuvEk7UnizDpWnXSYni8HOm1f18WWp4KH69T51QZRjo4H81Ip14u3P2EhT6EieYG6zk53JuYbvTe9EBErh4jjT500Jte1ldIe")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "pk_test_51TuvEk7UnizDpWnXXiITsfJOJpnTADkYL1qaSaMspYwUHMaD698eZv3kef1s5t55OSbJ7G4pB1MReornninkLA8fa00YFj12gL8")
 
 # =====================================================================
 # RUTAS DE LA APLICACIÓN
@@ -61,8 +66,13 @@ def index():
     
     if email_usuario:
         conn = obtener_conexion_db()
-        user = conn.execute('SELECT * FROM usuarios WHERE email = ?', (email_usuario,)).fetchone()
+        # CORRECCIÓN: Sintaxis correcta invocando el módulo extras importado
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email_usuario,))
+        user = cursor.fetchone()
+        cursor.close()
         conn.close()
+        
         if user:
             creditos_actuales = user['creditos']
             if user['is_pro'] == 1:
@@ -106,8 +116,10 @@ def index():
             if exito:
                 if email_usuario and user and not user['is_pro'] and user['creditos'] > 0:
                     conn = obtener_conexion_db()
-                    conn.execute('UPDATE usuarios SET creditos = creditos - 1 WHERE email = ?', (email_usuario,))
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE usuarios SET creditos = creditos - 1 WHERE email = %s', (email_usuario,))
                     conn.commit()
+                    cursor.close()
                     conn.close()
                 return send_file(pdf_path, as_attachment=True)
             else:
@@ -159,15 +171,17 @@ def pago_exitoso(tipo):
         
     email = session['user_email']
     conn = obtener_conexion_db()
+    cursor = conn.cursor()
     
     if tipo == 'credito':
-        conn.execute('UPDATE usuarios SET creditos = creditos + 1 WHERE email = ?', (email,))
+        cursor.execute('UPDATE usuarios SET creditos = creditos + 1 WHERE email = %s', (email,))
         mensaje = "Has añadido 1 crédito de descarga suelta con éxito. 🎉"
     elif tipo == 'suscripcion':
-        conn.execute('UPDATE usuarios SET is_pro = 1 WHERE email = ?', (email,))
+        cursor.execute('UPDATE usuarios SET is_pro = 1 WHERE email = %s', (email,))
         mensaje = "¡Te has suscrito con éxito a SheetMusic Pro! 🎉"
         
     conn.commit()
+    cursor.close()
     conn.close()
     
     return f'''
@@ -181,21 +195,25 @@ def pago_exitoso(tipo):
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        email = request.form.get('email').strip().lower()
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
         if not email or not password: 
-            return "Campos obligatorios vacíos."
+            flash("Campos obligatorios vacíos.")
+            return redirect(url_for('registro'))
         password_encriptada = generate_password_hash(password)
         conn = obtener_conexion_db()
+        cursor = conn.cursor()
         try:
-            conn.execute('INSERT INTO usuarios (email, password) VALUES (?, ?)', (email, password_encriptada))
+            cursor.execute('INSERT INTO usuarios (email, password) VALUES (%s, %s)', (email, password_encriptada))
             conn.commit()
-            session.permanent = True  # Activamos persistencia de sesión
+            session.permanent = True  
             session['user_email'] = email
             return redirect(url_for('index'))
-        except sqlite3.IntegrityError: 
-            return "Este correo ya está registrado."
+        except psycopg2.errors.UniqueViolation: 
+            flash("Este correo electrónico ya está registrado.")
+            return redirect(url_for('registro'))
         finally: 
+            cursor.close()
             conn.close()
     return render_template('registro.html')
 
@@ -206,11 +224,15 @@ def login():
         password = request.form.get('password', '')
         
         conn = obtener_conexion_db()
-        user = conn.execute('SELECT * FROM usuarios WHERE email = ?', (email,)).fetchone()
+        # CORRECCIÓN: Sintaxis correcta invocando el módulo extras importado
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
+        user = cursor.fetchone()
+        cursor.close()
         conn.close()
         
         if user and check_password_hash(user['password'], password):
-            session.permanent = True  # Activamos persistencia de sesión
+            session.permanent = True  
             session['user_email'] = user['email']
             return redirect(url_for('index'))
         else:
