@@ -36,7 +36,8 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
         i2 = img2.resize((100, 30)).convert("L")
         a1, a2 = np.array(i1, dtype=np.float32), np.array(i2, dtype=np.float32)
         matriz_correlacion = np.corrcoef(a1.flatten(), a2.flatten())
-        # CORRECCIÓN REAL: Acceso seguro al índice numérico de la matriz de correlación
+        
+        # CORRECCIÓN DE SINTAXIS ABSOLUTA: Extraer la celda (0,1) del array bidimensional de NumPy
         if matriz_correlacion.ndim > 1:
             valor_correlacion = float(matriz_correlacion[0, 1])
         else:
@@ -169,7 +170,6 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
 
     if paginas_creadas and len(paginas_creadas) > 0:
         try:
-            # CORRECCIÓN DEFINITIVA EN EL INDIZADO [0]
             primera_pagina = paginas_creadas[0]
             resto_paginas = [img for img in paginas_creadas[1:] if isinstance(img, Image.Image)]
             primera_pagina.save(output_pdf_path, "PDF", save_all=True, append_images=resto_paginas)
@@ -186,4 +186,5 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             return False
             
     return False
+
 
