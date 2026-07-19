@@ -2,223 +2,165 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SheetMusic Extractor - Transcribe tus vídeos</title>
+    <title>SheetMusic Extractor Pro</title>
     <style>
-        /* ESTILOS BLINDADOS EN CSS PURO (Evita que se rompa la web) */
-        :root {
-            --bg-principal: #0f172a;
-            --bg-tarjeta: #1e293b;
-            --texto-principal: #f8fafc;
-            --texto-secundario: #94a3b8;
-            --color-acento: #10b981;
-            --color-acento-hover: #059669;
-            --borde: #334155;
+        :root { 
+            --bg-principal: #0f172a; 
+            --bg-tarjeta: #1e293b; 
+            --texto-principal: #f8fafc; 
+            --texto-secundario: #94a3b8; 
+            --color-acento: #10b981; 
+            --borde: #334155; 
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-principal); color: var(--texto-principal); font-family: sans-serif; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        header { 
+            background-color: var(--bg-tarjeta); 
+            border-bottom: 1px solid var(--borde); 
+            padding: 16px 32px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        header h1 { font-size: 22px; color: var(--texto-principal); }
+        header h1 span { color: var(--color-acento); }
+        
+        .menu-usuario { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .badge-cuenta { background-color: #475569; color: #fff; padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .badge-pro { background-color: var(--color-acento); color: #0f172a; }
+        
+        .btn-nav { color: var(--texto-principal); text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; transition: background 0.2s; }
+        .btn-nav:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .btn-nav-acento { background-color: var(--color-acento); color: #0f172a; font-weight: 600; }
+        .btn-nav-acento:hover { background-color: #059669; }
+        .btn-comprar-credito { background-color: rgba(16, 185, 129, 0.1); color: var(--color-acento); border: 1px solid var(--color-acento); font-weight: 600; }
+        .btn-comprar-credito:hover { background-color: rgba(16, 185, 129, 0.2); }
+        .btn-logout { color: #f43f5e; }
+        .btn-logout:hover { background-color: rgba(244, 63, 94, 0.1); }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-principal);
-            color: var(--texto-principal);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            min-height: 100-screen;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 100vh;
-        }
-
-        header {
-            background-color: var(--bg-tarjeta);
-            border-b: 1px solid var(--borde);
-            padding: 24px;
-            text-center: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        header h1 {
-            color: var(--color-acento);
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        header p {
-            color: var(--texto-secundario);
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        main {
-            width: 100%;
-            max-width: 450px;
-            margin: auto;
-            padding: 32px;
-            background-color: var(--bg-tarjeta);
-            border-radius: 16px;
-            border: 1px solid var(--borde);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        }
-
-        .grupo-formulario {
-            margin-bottom: 24px;
-        }
-
-        .etiqueta {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--texto-principal);
-            margin-bottom: 8px;
-        }
-
-        /* CONTROL ESTRICTO DEL ICONO: Evita que la nube se vuelva gigante */
-        .zona-subida {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 150px;
-            border: 2px dashed var(--borde);
-            border-radius: 12px;
-            cursor: pointer;
-            background-color: rgba(51, 65, 85, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        .zona-subida:hover {
-            background-color: rgba(51, 65, 85, 0.5);
-            border-color: var(--color-acento);
-        }
-
-        .icono-nube {
-            width: 48px;
-            height: 48px;
-            fill: none;
-            stroke: var(--texto-secundario);
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            margin-bottom: 12px;
-        }
-
-        .zona-subida p {
-            font-size: 13px;
-            color: var(--texto-secundario);
-            text-align: center;
-        }
-
-        select {
-            width: 100%;
-            background-color: #334155;
-            border: 1px solid var(--borde);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: var(--texto-principal);
-            font-size: 15px;
-            outline: none;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        select:focus {
-            border-color: var(--color-acento);
-        }
-
-        .btn-enviar {
-            width: 100%;
-            background-color: var(--color-acento);
-            color: #0f172a;
-            font-size: 16px;
-            font-weight: 700;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-        }
-
-        .btn-enviar:hover {
-            background-color: var(--color-acento-hover);
-            transform: translateY(-1px);
-        }
-
-        #loading {
-            display: none;
-            text-align: center;
-            color: var(--color-acento);
-            font-weight: 600;
-            font-size: 15px;
-            padding: 12px;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        footer {
-            padding: 16px;
-            text-align: center;
-            font-size: 12px;
-            color: #475569;
-            background-color: #020617;
-        }
+        main { width: 100%; max-width: 550px; margin: auto; padding: 24px; background-color: var(--bg-tarjeta); border-radius: 16px; border: 1px solid var(--borde); margin-top: 40px; margin-bottom: 40px; }
+        .grupo-formulario { margin-bottom: 20px; }
+        .etiqueta { display: block; font-size: 14px; margin-bottom: 8px; }
+        .zona-subida { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 90px; border: 2px dashed var(--borde); border-radius: 12px; cursor: pointer; background-color: rgba(51,65,85,0.3); }
+        #contenedor-preview { display: none; width: 100%; border-radius: 12px; border: 1px solid var(--borde); margin-bottom: 16px; overflow: hidden; }
+        #canvas-preview { width: 100%; display: block; height: auto; }
+        .contenedor-slider { background-color: rgba(15,23,42,0.4); padding: 14px; border-radius: 12px; border: 1px solid var(--borde); }
+        .control-slider { margin-bottom: 10px; }
+        .info-slider { display: flex; justify-content: space-between; font-size: 13px; color: var(--texto-secundario); margin-bottom: 4px; }
+        input[type="range"], select { width: 100%; accent-color: var(--color-acento); }
+        select { background-color: #334155; border: 1px solid var(--borde); border-radius: 12px; padding: 10px; color: var(--texto-principal); outline: none; }
+        .btn-enviar { width: 100%; background-color: var(--color-acento); color: #0f172a; font-size: 16px; font-weight: 700; padding: 12px; border: none; border-radius: 12px; cursor: pointer; }
+        #loading { text-align: center; color: var(--color-acento); font-weight: 600; padding: 10px; display: none; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        footer { padding: 12px; text-align: center; font-size: 11px; color: #475569; background-color: #020617; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>🎵 SheetMusic Extractor</h1>
-        <p>Transforma vídeos de transcripciones en PDFs limpios al instante</p>
+        <h1>🎵 SheetMusic <span>Pro</span></h1>
+        <div class="menu-usuario">
+            {% if session.get('user_email') %}
+                <span>{{ session.get('user_email') }}</span>
+                {% if usuario_premium %}
+                    <span class="badge-cuenta badge-pro">PRO MEMBER</span>
+                    {% if creditos > 0 %}
+                        <span style="color: var(--texto-secundario);">({{ creditos }} credits left)</span>
+                    {% endif %}
+                {% else %}
+                    <!-- NEGOCIO: Botones dinámicos de compra para el usuario gratuito -->
+                    <a href="/comprar/credito" class="btn-nav btn-comprar-credito">Buy 1 PDF (€1)</a>
+                    <a href="/comprar/suscripcion" class="btn-nav btn-nav-acento">Upgrade to Pro (€2.99/mo)</a>
+                    <span class="badge-cuenta">FREE ACCOUNT</span>
+                {% endif %}
+                <a href="/logout" class="btn-nav btn-logout">Sign Out</a>
+            {% else %}
+                <a href="/login" class="btn-nav">Log In</a>
+                <a href="/registro" class="btn-nav btn-nav-acento">Sign Up</a>
+            {% endif %}
+        </div>
     </header>
 
     <main>
         <form action="/" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
-            
             <div class="grupo-formulario">
-                <label class="etiqueta">1. Sube tu vídeo recortado (.mp4, .mkv)</label>
+                <label class="etiqueta">1. Sube tu vídeo de la partitura</label>
                 <label class="zona-subida">
-                    <!-- Icono SVG controlado de tamaño fijo -->
-                    <svg class="icono-nube" viewBox="0 0 24 24">
-                        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                    </svg>
-                    <p>Haz clic para buscar o arrastra el archivo aquí</p>
-                    <input type="file" name="video" accept=".mp4,.mkv,.avi" style="display: none;" required />
+                    <p id="texto-subida">Haz clic para buscar tu archivo de vídeo</p>
+                    <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
                 </label>
             </div>
-
+            <div id="contenedor-preview"><canvas id="canvas-preview"></canvas></div>
             <div class="grupo-formulario">
-                <label class="etiqueta">2. Elige el formato de salida</label>
+                <label class="etiqueta">2. Ajusta el área de la partitura</label>
+                <div class="contenedor-slider">
+                    <div class="control-slider">
+                        <div class="info-slider"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
+                        <input type="range" name="corte_sup" id="corte_sup" min="0" max="80" value="0" oninput="actualizarCorte()">
+                    </div>
+                    <div class="control-slider">
+                        <div class="info-slider"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
+                        <input type="range" name="corte_inf" id="corte_inf" min="0" max="80" value="0" oninput="actualizarCorte()">
+                    </div>
+                </div>
+            </div>
+            <div class="grupo-formulario">
+                <label class="etiqueta">3. Formato de salida</label>
                 <select name="formato">
-                    <option value="2">Horizontal (2 por fila - Ideal para PC)</option>
-                    <option value="1">Vertical (1 por fila - Ideal para imprimir)</option>
+                    <option value="1" selected>Vertical (1 por fila - Ideal para PC)</option>
+                    <option value="2">Horizontal (2 por fila - Ideal para imprimir)</option>
                 </select>
             </div>
-
-            <button type="submit" id="btn-submit" class="btn-enviar">
-                🚀 Generar Partitura Completa
-            </button>
-            
-            <div id="loading">
-                ⏳ Analizando fotogramas... Esto puede tardar un minuto.
-            </div>
+            <button type="submit" id="btn-submit" class="btn-enviar">🚀 Procesar y Descargar PDF</button>
+            <div id="loading">⏳ Recortando márgenes... Esto puede tardar un minuto.</div>
         </form>
     </main>
 
-    <footer>
-        Hecho por músicos para músicos. Todos los derechos reservados.
-    </footer>
+    <footer>Hecho por músicos para músicos.</footer>
+    <video id="video-oculto" style="display:none;"></video>
 
     <script>
+        let videoOculto = document.getElementById('video-oculto');
+        let canvas = document.getElementById('canvas-preview');
+        let ctx = canvas.getContext('2d');
+        let fotogramaCargado = false;
+
+        function procesarVideoLocal(event) {
+            const archivos = event.target.files;
+            if (!archivos || archivos.length === 0) return;
+            const archivo = archivos[0]; 
+            document.getElementById('texto-subida').innerText = archivo.name;
+            videoOculto.src = URL.createObjectURL(archivo);
+            videoOculto.load();
+            videoOculto.onloadedmetadata = function() { videoOculto.currentTime = 15; };
+            videoOculto.onseeked = function() {
+                canvas.width = videoOculto.videoWidth; canvas.height = videoOculto.videoHeight;
+                document.getElementById('contenedor-preview').style.display = 'block';
+                fotogramaCargado = true; dibujarGuias();
+            };
+        }
+
+        function dibujarGuias() {
+            if (!fotogramaCargado) return;
+            ctx.drawImage(videoOculto, 0, 0, canvas.width, canvas.height);
+            let ySup = canvas.height * (parseFloat(document.getElementById('corte_sup').value) / 100);
+            let yInf = canvas.height * ((100 - parseFloat(document.getElementById('corte_inf').value)) / 100);
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(0, 0, canvas.width, ySup);
+            ctx.fillRect(0, yInf, canvas.width, canvas.height - yInf);
+            ctx.strokeStyle = "#ef4444"; ctx.lineWidth = Math.max(4, canvas.height * 0.006);
+            ctx.setLineDash([canvas.width * 0.015, canvas.width * 0.015]);
+            ctx.beginPath(); ctx.moveTo(0, ySup); ctx.lineTo(canvas.width, ySup); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, yInf); ctx.lineTo(canvas.width, yInf); ctx.stroke();
+        }
+
+        function actualizarCorte() {
+            document.getElementById('val-sup').innerText = document.getElementById('corte_sup').value;
+            document.getElementById('val-inf').innerText = document.getElementById('corte_inf').value;
+            dibujarGuias();
+        }
+
         function mostrarCarga() {
             document.getElementById('btn-submit').style.display = 'none';
             document.getElementById('loading').style.display = 'block';
@@ -226,3 +168,4 @@
     </script>
 </body>
 </html>
+
