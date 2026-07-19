@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -29,7 +29,6 @@
         </div>
     </header>
 
-    <!-- Se eliminó flex-grow y se añadió un contenedor intermedio para evitar que la tarjeta se deforme verticalmente -->
     <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
         <main style="width:100%; max-width:550px; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
             <form action="/" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
@@ -50,11 +49,13 @@
                     <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
                         <div style="margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
-                            <input type="range" name="corte_sup" id="corte_sup" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                            <!-- MODIFICADO: Máximo extendido al 90% -->
+                            <input type="range" name="corte_sup" id="corte_sup" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
                         </div>
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
-                            <input type="range" name="corte_inf" id="corte_inf" min="0" max="80" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                            <!-- MODIFICADO: Máximo extendido al 90% -->
+                            <input type="range" name="corte_inf" id="corte_inf" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
                         </div>
                     </div>
                 </div>
@@ -89,7 +90,6 @@
 
         function procesarVideoLocal(e) {
             const f = e.target.files; if (!f || f.length === 0) return;
-            // CORRECCIÓN: Acceder correctamente al índice 0 de la lista de archivos
             document.getElementById('texto-subida').innerText = f[0].name;
             videoOculto.src = URL.createObjectURL(f[0]); videoOculto.load();
             videoOculto.onloadedmetadata = () => { videoOculto.currentTime = 15; };
