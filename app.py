@@ -200,17 +200,18 @@ def login():
         conn = obtener_conexion_db()
         user = conn.execute('SELECT * FROM usuarios WHERE email = ?', (email,)).fetchone()
         conn.close()
+        
         if user and check_password_hash(user['password'], password):
-            session['user_email'] = email
+            session['user_email'] = user['email']
             return redirect(url_for('index'))
-        else: return "Credenciales incorrectas."
+        else:
+            return "Credenciales incorrectas."
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('user_email', None)
+    session.clear()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    puerto = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=puerto)
+    app.run(debug=True)
