@@ -45,7 +45,7 @@
         .zona-subida { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 90px; border: 2px dashed var(--borde); border-radius: 12px; cursor: pointer; background-color: rgba(51,65,85,0.3); }
         #contenedor-preview { display: none; width: 100%; border-radius: 12px; border: 1px solid var(--borde); margin-bottom: 16px; overflow: hidden; }
         #canvas-preview { width: 100%; display: block; height: auto; }
-        .contenedor-slider { background-color: rgba(15,23,42,0.4); padding: 14px; border-radius: 12px; border: 1px solid var(--borde); }
+        .contenedor-slider { background-color: rgba(15, 23, 42, 0.4); padding: 14px; border-radius: 12px; border: 1px solid var(--borde); }
         .control-slider { margin-bottom: 10px; }
         .info-slider { display: flex; justify-content: space-between; font-size: 13px; color: var(--texto-secundario); margin-bottom: 4px; }
         input[type="range"], select { width: 100%; accent-color: var(--color-acento); }
@@ -69,7 +69,6 @@
                         <span style="color: var(--texto-secundario);">({{ creditos }} credits left)</span>
                     {% endif %}
                 {% else %}
-                    <!-- NEGOCIO: Botones dinámicos de compra para el usuario gratuito -->
                     <a href="/comprar/credito" class="btn-nav btn-comprar-credito">Buy 1 PDF (€1)</a>
                     <a href="/comprar/suscripcion" class="btn-nav btn-nav-acento">Upgrade to Pro (€2.99/mo)</a>
                     <span class="badge-cuenta">FREE ACCOUNT</span>
@@ -107,9 +106,10 @@
             </div>
             <div class="grupo-formulario">
                 <label class="etiqueta">3. Formato de salida</label>
+                <!-- CORREGIDO: Inversión de etiquetas para adecuarlo a los estándares de lectura de los músicos -->
                 <select name="formato">
-                    <option value="1" selected>Vertical (1 por fila - Ideal para PC)</option>
-                    <option value="2">Horizontal (2 por fila - Ideal para imprimir)</option>
+                    <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
+                    <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
                 </select>
             </div>
             <button type="submit" id="btn-submit" class="btn-enviar">🚀 Procesar y Descargar PDF</button>
@@ -168,4 +168,3 @@
     </script>
 </body>
 </html>
-
