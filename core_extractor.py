@@ -4,7 +4,7 @@ import glob
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=True, corte_sup=0, corte_inf=0, es_premium=False):
+def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=True, corte_sup=0, corte_inf=0, es_premium=False, inicio_seg=0, fin_seg=None):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     OUTPUT_DIR = os.path.join(BASE_DIR, "capturas_temporales")
     UMBRAL_MOVIMIENTO = 2.0
@@ -75,16 +75,25 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     y2 = int(alto * ((100 - corte_inf) / 100))
     if y1 >= y2 or y1 >= alto or y2 <= 0:
         y1, y2 = 0, alto
-        
-    segundo_inicio = 4
+
+    # ---------------------------------------------------------------
+    # NUEVO: recorte de duración (evita procesar intro/outro sin partitura)
+    # ---------------------------------------------------------------
+    segundo_inicio = max(inicio_seg, 0)
     count = int(fps * segundo_inicio)
     cap.set(cv2.CAP_PROP_POS_FRAMES, count)
+
+    frame_limite = int(fps * fin_seg) if fin_seg else None
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret or frame is None:
             break
-            
+
+        # NUEVO: detener el procesamiento al llegar al segundo final elegido
+        if frame_limite is not None and count >= frame_limite:
+            break
+
         frame_recortado = frame[y1:y2, 0:ancho]
         gray = cv2.cvtColor(frame_recortado, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
