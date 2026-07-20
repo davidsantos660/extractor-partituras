@@ -39,29 +39,48 @@
                         <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
                     </div>
                 </div>
-                
+
                 <div id="contenedor-preview" style="display:none; width:100%; border-radius:12px; border:1px solid #334155; margin-bottom:16px; overflow:hidden;">
                     <canvas id="canvas-preview" style="width:100%; display:block; height:auto;"></canvas>
                 </div>
 
+                <!-- NUEVO: bloque para recortar la duración y evitar intro/outro sin partitura -->
+                <div id="bloque-recorte-duracion" style="display:none; margin-bottom:20px;">
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">2. Recorta la duración (evita intro/outro)</label>
+                    <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
+                        <div style="margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                <span>Inicio</span><span id="txt-inicio">0:00</span>
+                            </div>
+                            <input type="range" id="rango_inicio" min="0" max="100" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion()">
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                <span>Fin</span><span id="txt-fin">0:00</span>
+                            </div>
+                            <input type="range" id="rango_fin" min="0" max="100" value="100" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion()">
+                        </div>
+                    </div>
+                    <input type="hidden" name="inicio_seg" id="input_inicio_seg" value="0">
+                    <input type="hidden" name="fin_seg" id="input_fin_seg" value="">
+                </div>
+
                 <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">2. Ajusta el área de la partitura</label>
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Ajusta el área de la partitura</label>
                     <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
                         <div style="margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
-                            <!-- MODIFICADO: Máximo extendido al 90% -->
                             <input type="range" name="corte_sup" id="corte_sup" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
                         </div>
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
-                            <!-- MODIFICADO: Máximo extendido al 90% -->
                             <input type="range" name="corte_inf" id="corte_inf" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
                         </div>
                     </div>
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Formato de salida</label>
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">4. Formato de salida</label>
                     <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
                         <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
                         <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
@@ -92,7 +111,17 @@
             const f = e.target.files; if (!f || f.length === 0) return;
             document.getElementById('texto-subida').innerText = f[0].name;
             videoOculto.src = URL.createObjectURL(f[0]); videoOculto.load();
-            videoOculto.onloadedmetadata = () => { videoOculto.currentTime = 15; };
+            videoOculto.onloadedmetadata = () => {
+                videoOculto.currentTime = 15;
+
+                // NUEVO: mostrar el bloque de recorte de duración y fijar el rango completo por defecto
+                document.getElementById('bloque-recorte-duracion').style.display = 'block';
+                document.getElementById('rango_inicio').value = 0;
+                document.getElementById('rango_fin').value = 100;
+                document.getElementById('input_inicio_seg').value = 0;
+                document.getElementById('input_fin_seg').value = videoOculto.duration.toFixed(2);
+                document.getElementById('txt-fin').innerText = formatearTiempo(videoOculto.duration);
+            };
             videoOculto.onseeked = () => {
                 canvas.width = videoOculto.videoWidth; canvas.height = videoOculto.videoHeight;
                 document.getElementById('contenedor-preview').style.display = 'block';
@@ -116,6 +145,35 @@
             document.getElementById('val-sup').innerText = document.getElementById('corte_sup').value;
             document.getElementById('val-inf').innerText = document.getElementById('corte_inf').value;
             dibujarGuias();
+        }
+
+        // NUEVO: lógica del recorte de duración (intro/outro)
+        function formatearTiempo(seg) {
+            const m = Math.floor(seg / 60);
+            const s = Math.floor(seg % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function actualizarRecorteDuracion() {
+            const duracion = videoOculto.duration;
+            if (!duracion || isNaN(duracion)) return;
+
+            let inicio = parseFloat(document.getElementById('rango_inicio').value) / 100 * duracion;
+            let fin = parseFloat(document.getElementById('rango_fin').value) / 100 * duracion;
+
+            // Evita que el inicio se pase del fin
+            if (inicio >= fin) {
+                inicio = Math.max(0, fin - 1);
+                document.getElementById('rango_inicio').value = (inicio / duracion) * 100;
+            }
+
+            document.getElementById('txt-inicio').innerText = formatearTiempo(inicio);
+            document.getElementById('txt-fin').innerText = formatearTiempo(fin);
+            document.getElementById('input_inicio_seg').value = inicio.toFixed(2);
+            document.getElementById('input_fin_seg').value = fin.toFixed(2);
+
+            // Mueve la preview al frame de inicio para que veas si ya sale la partitura
+            videoOculto.currentTime = inicio;
         }
     </script>
 </body>
