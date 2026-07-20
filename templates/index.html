@@ -52,13 +52,13 @@
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
                                 <span>Inicio</span><span id="txt-inicio">0:00</span>
                             </div>
-                            <input type="range" id="rango_inicio" min="0" max="100" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion()">
+                            <input type="range" id="rango_inicio" min="0" max="100" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('inicio')">
                         </div>
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
                                 <span>Fin</span><span id="txt-fin">0:00</span>
                             </div>
-                            <input type="range" id="rango_fin" min="0" max="100" value="100" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion()">
+                            <input type="range" id="rango_fin" min="0" max="100" value="100" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('fin')">
                         </div>
                     </div>
                     <input type="hidden" name="inicio_seg" id="input_inicio_seg" value="0">
@@ -154,17 +154,22 @@
             return `${m}:${s}`;
         }
 
-        function actualizarRecorteDuracion() {
+        function actualizarRecorteDuracion(origen) {
             const duracion = videoOculto.duration;
             if (!duracion || isNaN(duracion)) return;
 
             let inicio = parseFloat(document.getElementById('rango_inicio').value) / 100 * duracion;
             let fin = parseFloat(document.getElementById('rango_fin').value) / 100 * duracion;
 
-            // Evita que el inicio se pase del fin
+            // Evita que el inicio se pase del fin (y viceversa)
             if (inicio >= fin) {
-                inicio = Math.max(0, fin - 1);
-                document.getElementById('rango_inicio').value = (inicio / duracion) * 100;
+                if (origen === 'fin') {
+                    fin = Math.min(duracion, inicio + 1);
+                    document.getElementById('rango_fin').value = (fin / duracion) * 100;
+                } else {
+                    inicio = Math.max(0, fin - 1);
+                    document.getElementById('rango_inicio').value = (inicio / duracion) * 100;
+                }
             }
 
             document.getElementById('txt-inicio').innerText = formatearTiempo(inicio);
@@ -172,8 +177,8 @@
             document.getElementById('input_inicio_seg').value = inicio.toFixed(2);
             document.getElementById('input_fin_seg').value = fin.toFixed(2);
 
-            // Mueve la preview al frame de inicio para que veas si ya sale la partitura
-            videoOculto.currentTime = inicio;
+            // NUEVO: mueve la preview al frame de INICIO o de FIN según el slider que hayas movido tú
+            videoOculto.currentTime = (origen === 'fin') ? fin : inicio;
         }
     </script>
 </body>
