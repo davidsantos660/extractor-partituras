@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from core_extractor import procesar_video_partitura
 
 app = Flask(__name__)
-app.secret_key = "clave_secreta_super_segura_para_el_negocio"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "clave_secreta_super_segura_para_el_negocio")
 
 # Configuración para que la sesión recuerde al usuario en su navegador por 30 días
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
@@ -50,8 +50,8 @@ inicializar_base_de_datos()
 # =====================================================================
 # CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
 # =====================================================================
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_51TuvEk7UnizDpWnXSYni8HOm1f18WWp4KH69T51QZRjo4H81Ip14u3P2EhT6EieYG6zk53JuYbvTe9EBErh4jjT500Jte1ldIe")
-STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "pk_test_51TuvEk7UnizDpWnXXiITsfJOJpnTADkYL1qaSaMspYwUHMaD698eZv3kef1s5t55OSbJ7G4pB1MReornninkLA8fa00YFj12gL8")
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
 
 # =====================================================================
 # RUTAS DE LA APLICACIÓN
@@ -63,6 +63,7 @@ def index():
     es_pro = False
     email_usuario = session.get('user_email')
     creditos_actuales = 0
+    user = None
     
     if email_usuario:
         conn = obtener_conexion_db()
@@ -93,6 +94,11 @@ def index():
         es_horizontal = True if formato == '2' else False
         corte_superior = float(request.form.get('corte_sup', 0))
         corte_inferior = float(request.form.get('corte_inf', 0))
+
+        # NUEVO: rango de duración elegido por el usuario (evita intro/outro)
+        inicio_seg = float(request.form.get('inicio_seg', 0))
+        fin_seg_raw = request.form.get('fin_seg', '')
+        fin_seg = float(fin_seg_raw) if fin_seg_raw else None
         
         if file:
             video_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -107,7 +113,9 @@ def index():
                 formato_horizontal=es_horizontal,
                 corte_sup=corte_superior,
                 corte_inf=corte_inferior,
-                es_premium=usuario_premium
+                es_premium=usuario_premium,
+                inicio_seg=inicio_seg,
+                fin_seg=fin_seg
             )
             
             if os.path.exists(video_path):
