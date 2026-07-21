@@ -78,21 +78,7 @@
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Título y autor (opcional)</label>
-                    <div style="display:flex; gap:10px; margin-bottom:12px;">
-                        <input type="text" name="titulo" id="input-titulo" placeholder="Título de la canción" maxlength="80" oninput="actualizarPreviewTitulo()" style="flex:2; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
-                        <input type="text" name="autor" id="input-autor" placeholder="Autor / artista" maxlength="50" oninput="actualizarPreviewTitulo()" style="flex:1; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
-                    </div>
-
-                    <!-- NUEVO: previsualización en vivo, con la fuente real que se usará en el PDF -->
-                    <div id="preview-titulo-caja" style="display:none; background-color:#f8fafc; border-radius:8px; padding:14px 18px; position:relative; min-height:50px;">
-                        <div id="preview-titulo-texto" style="font-family:'PartituraTitulo', sans-serif; color:#0f172a; font-size:20px; text-align:center;"></div>
-                        <div id="preview-autor-texto" style="font-family:'PartituraAutor', sans-serif; color:#475569; font-size:12px; text-align:right; margin-top:4px;"></div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">4. Ajusta el área de la partitura</label>
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Ajusta el área de la partitura</label>
                     <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
                         <div style="margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
@@ -106,11 +92,25 @@
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">5. Formato de salida</label>
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">4. Formato de salida</label>
                     <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
                         <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
                         <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
                     </select>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">5. Título y autor (opcional)</label>
+                    <div style="display:flex; gap:10px; margin-bottom:12px;">
+                        <input type="text" name="titulo" id="input-titulo" placeholder="Título de la canción" maxlength="80" oninput="actualizarPreviewTitulo()" style="flex:2; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
+                        <input type="text" name="autor" id="input-autor" placeholder="Autor / artista" maxlength="50" oninput="actualizarPreviewTitulo()" style="flex:1; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
+                    </div>
+
+                    <!-- NUEVO: previsualización en vivo, con la fuente real que se usará en el PDF -->
+                    <div id="preview-titulo-caja" style="display:none; background-color:#f8fafc; border-radius:8px; padding:14px 18px; position:relative; min-height:50px;">
+                        <div id="preview-titulo-texto" style="font-family:'PartituraTitulo', sans-serif; color:#0f172a; font-size:20px; text-align:center;"></div>
+                        <div id="preview-autor-texto" style="font-family:'PartituraAutor', sans-serif; color:#475569; font-size:12px; text-align:right; margin-top:4px;"></div>
+                    </div>
                 </div>
 
                 <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Procesar y Descargar PDF</button>
@@ -204,7 +204,10 @@
             document.getElementById('input_fin_seg').value = fin.toFixed(2);
 
             // NUEVO: mueve la preview al frame de INICIO o de FIN según el slider que hayas movido tú
-            videoOculto.currentTime = (origen === 'fin') ? fin : inicio;
+            // Si el punto es el segundo 0 exacto, algunos navegadores muestran un frame en negro
+            // porque aún no lo han decodificado — saltamos a una fracción de segundo después solo para la vista previa.
+            const tiempoParaVerPreview = (origen === 'fin') ? fin : Math.max(inicio, 0.08);
+            videoOculto.currentTime = tiempoParaVerPreview;
         }
         // NUEVO: previsualización en vivo del título/autor, con la misma fuente del PDF
         function actualizarPreviewTitulo() {
