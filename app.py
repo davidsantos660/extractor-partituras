@@ -137,7 +137,7 @@ def index():
                     conn.close()
                 return send_file(pdf_path, as_attachment=True)
             else:
-                return "Error al procesar el vídeo musical."
+                return "Something went wrong while processing your video. Please try a different video or trim it further.", 500
                 
     return render_template('index.html', usuario_premium=usuario_premium, es_pro=es_pro, creditos=creditos_actuales)
 
@@ -148,11 +148,11 @@ def comprar(tipo):
         
     try:
         if tipo == 'suscripcion':
-            nombre_prod = "Suscripción Mensual SheetMusic Pro"
-            precio_centimos = 100 
+            nombre_prod = "SheetMusic Pro Monthly Subscription"
+            precio_centimos = 99 
             modo_pago = "subscription"
         else:
-            return "Plan no válido"
+            return "Invalid plan"
 
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -172,7 +172,7 @@ def comprar(tipo):
         )
         return redirect(checkout_session.url, code=303)
     except Exception as e:
-        return f"Error al conectar con la pasarela de Stripe: {e}"
+        return f"Error connecting to Stripe: {e}"
 
 @app.route('/pago-exitoso/<tipo>')
 def pago_exitoso(tipo):
@@ -185,9 +185,9 @@ def pago_exitoso(tipo):
     
     if tipo == 'suscripcion':
         cursor.execute('UPDATE usuarios SET is_pro = 1 WHERE email = %s', (email,))
-        mensaje = "¡Te has suscrito con éxito a SheetMusic Pro! 🎉"
+        mensaje = "You've successfully subscribed to SheetMusic Pro! 🎉"
     else:
-        mensaje = "Pago procesado."
+        mensaje = "Payment processed."
         
     conn.commit()
     cursor.close()
@@ -195,9 +195,9 @@ def pago_exitoso(tipo):
     
     return f'''
         <div style="background:#0f172a;color:#f8fafc;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:sans-serif;">
-            <h2 style="color:#10b981;">¡Pago completado con éxito!</h2>
+            <h2 style="color:#10b981;">Payment completed successfully!</h2>
             <p>{mensaje}</p>
-            <a href="{url_for('index')}" style="background:#10b981;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:20px;">Volver al Extractor</a>
+            <a href="{url_for('index')}" style="background:#10b981;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:20px;">Back to the Extractor</a>
         </div>
     '''
 
@@ -207,7 +207,7 @@ def registro():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         if not email or not password: 
-            flash("Campos obligatorios vacíos.")
+            flash("Please fill in all fields.")
             return redirect(url_for('registro'))
         password_encriptada = generate_password_hash(password)
         conn = obtener_conexion_db()
@@ -219,7 +219,7 @@ def registro():
             session['user_email'] = email
             return redirect(url_for('index'))
         except psycopg2.errors.UniqueViolation: 
-            flash("Este correo electrónico ya está registrado.")
+            flash("This email is already registered.")
             return redirect(url_for('registro'))
         finally: 
             cursor.close()
@@ -245,7 +245,7 @@ def login():
             session['user_email'] = user['email']
             return redirect(url_for('index'))
         else:
-            flash("Correo electrónico o contraseña incorrectos.")
+            flash("Incorrect email or password.")
             return redirect(url_for('login'))
             
     return render_template('login.html')
