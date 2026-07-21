@@ -120,7 +120,7 @@
                     </div>
 
                     <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Process and Download PDF</button>
-                    <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Trimming margins... this can take a minute.</div>
+                    <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Processing your video... long videos can take a few minutes, feel free to leave this tab open.</div>
                     <div id="error-box" style="display:none; text-align:center; color:#f87171; font-weight:600; padding:10px; font-size:14px;"></div>
                 </div>
 
@@ -241,9 +241,40 @@
         }
         actualizarPreviewTitulo();
 
-        // Submit the form with fetch so we can show a "generate another" screen
-        // instead of leaving the page stuck on the loading state after the download.
-        document.getElementById('form-partitura').addEventListener('submit', function (e) {
+        // NUEVO: el vídeo ya no se procesa dentro de una única petición HTTP larga
+        // (Render, como la mayoría de plataformas de hosting, corta las peticiones
+        // que tardan demasiado). Ahora /procesar responde al instante con un job_id,
+        // y vamos preguntando en /estado/<job_id> cada pocos segundos hasta que
+        // el PDF esté listo para descargar.
+        async function arrancarTrabajo(datos) {
+            const respuesta = await fetch('/procesar', { method: 'POST', body: datos });
+            if (!respuesta.ok) {
+                let texto = '';
+                try { const j = await respuesta.json(); texto = j.error || ''; } catch (e) {}
+                throw new Error(texto || 'Something went wrong while starting the process.');
+            }
+            const datosRespuesta = await respuesta.json();
+            return datosRespuesta.job_id;
+        }
+
+        function esperar(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function esperarTrabajo(jobId) {
+            while (true) {
+                await esperar(3000);
+                const respuesta = await fetch('/estado/' + jobId);
+                const datos = await respuesta.json();
+                if (datos.estado === 'listo') return;
+                if (datos.estado === 'error') {
+                    throw new Error(datos.mensaje || 'Something went wrong while processing the video.');
+                }
+                // si sigue "procesando", seguimos preguntando
+            }
+        }
+
+        document.getElementById('form-partitura').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             document.getElementById('btn-submit').style.display = 'none';
@@ -252,34 +283,23 @@
 
             const datos = new FormData(this);
 
-            fetch('/', { method: 'POST', body: datos })
-                .then(async (respuesta) => {
-                    if (!respuesta.ok) {
-                        const texto = await respuesta.text();
-                        throw new Error(texto || 'Something went wrong while processing the video.');
-                    }
-                    return respuesta.blob();
-                })
-                .then((blob) => {
-                    const url = window.URL.createObjectURL(blob);
-                    const enlace = document.createElement('a');
-                    enlace.href = url;
-                    enlace.download = 'sheet_music.pdf';
-                    document.body.appendChild(enlace);
-                    enlace.click();
-                    enlace.remove();
-                    window.URL.revokeObjectURL(url);
+            try {
+                const jobId = await arrancarTrabajo(datos);
+                await esperarTrabajo(jobId);
 
-                    document.getElementById('pasos-formulario').style.display = 'none';
-                    document.getElementById('pantalla-exito').style.display = 'block';
-                })
-                .catch((error) => {
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('btn-submit').style.display = 'block';
-                    const caja = document.getElementById('error-box');
-                    caja.innerText = '⚠️ ' + error.message;
-                    caja.style.display = 'block';
-                });
+                document.getElementById('pasos-formulario').style.display = 'none';
+                document.getElementById('pantalla-exito').style.display = 'block';
+
+                // La descarga se dispara con una navegación normal, para que el
+                // navegador la gestione de forma nativa (cabecera de adjunto).
+                window.location.href = '/descargar/' + jobId;
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('btn-submit').style.display = 'block';
+                const caja = document.getElementById('error-box');
+                caja.innerText = '⚠️ ' + error.message;
+                caja.style.display = 'block';
+            }
         });
 
         function generarOtraVez() {
