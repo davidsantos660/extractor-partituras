@@ -1,6 +1,8 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash, g
+from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash, g, jsonify
 import os
 import secrets
+import threading
+import uuid
 import psycopg2
 import psycopg2.extras  # CORRECCIÓN CRÍTICA: Importación explícita para que DictCursor funcione
 import stripe
@@ -113,6 +115,45 @@ def descontar_credito_gratis(device_id):
     conn.commit()
     cursor.close()
     conn.close()
+# =====================================================================
+# PROCESAMIENTO EN SEGUNDO PLANO
+# =====================================================================
+# Render (y la mayoría de plataformas de hosting) cortan las peticiones HTTP
+# que tardan demasiado — no es algo configurable desde nuestro lado. Por eso
+# el vídeo NO se procesa dentro de la petición: se guarda, se lanza un hilo
+# que lo procesa de verdad, y el navegador pregunta cada pocos segundos si
+# ya está listo. Así la petición inicial responde al instante, sin importar
+# cuánto tarde el vídeo en procesarse.
+#
+# NOTA: este diccionario vive en memoria del proceso. Funciona bien con un
+# único worker (recomendado, ver Procfile), pero si en el futuro escalas a
+# varios workers o instancias, cada uno tendría su propia copia y esto dejaría
+# de funcionar correctamente — en ese caso habría que pasar esto a Redis o a
+# una tabla de la base de datos.
+TRABAJOS = {}
+
+MENSAJE_ERROR_PROCESADO = "Something went wrong while processing your video. Please try a different video or trim it further."
+
+def procesar_en_segundo_plano(job_id, video_path, pdf_path, parametros, device_id, es_pro, tenia_creditos_gratis):
+    try:
+        exito = procesar_video_partitura(video_path, pdf_path, **parametros)
+    except Exception as e:
+        print(f"Critical error during background processing: {e}")
+        exito = False
+    finally:
+        if os.path.exists(video_path):
+            try:
+                os.remove(video_path)
+            except Exception:
+                pass
+
+    if exito:
+        if not es_pro and tenia_creditos_gratis:
+            descontar_credito_gratis(device_id)
+        TRABAJOS[job_id] = {'estado': 'listo', 'pdf_path': pdf_path}
+    else:
+        TRABAJOS[job_id] = {'estado': 'error', 'mensaje': MENSAJE_ERROR_PROCESADO}
+
 
 # =====================================================================
 # CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
@@ -124,8 +165,13 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
 # RUTAS DE LA APLICACIÓN
 # =====================================================================
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def index():
+    usuario_premium, es_pro, creditos_actuales, _ = _estado_usuario_actual()
+    return render_template('index.html', usuario_premium=usuario_premium, es_pro=es_pro, creditos=creditos_actuales)
+
+def _estado_usuario_actual():
+    """Devuelve (usuario_premium, es_pro, creditos_actuales, user) para el visitante actual."""
     usuario_premium = False
     es_pro = False
     email_usuario = session.get('user_email')
@@ -137,7 +183,6 @@ def index():
 
     if email_usuario:
         conn = obtener_conexion_db()
-        # CORRECCIÓN: Sintaxis correcta invocando el módulo extras importado
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email_usuario,))
         user = cursor.fetchone()
@@ -152,59 +197,73 @@ def index():
     elif creditos_actuales > 0:
         usuario_premium = True
 
-    if request.method == 'POST':
-        if 'video' not in request.files:
-            return redirect(request.url)
-        
-        file = request.files['video']
-        if file.filename == '':
-            return redirect(request.url)
-        
-        formato = request.form.get('formato')
-        es_horizontal = True if formato == '2' else False
-        corte_superior = float(request.form.get('corte_sup', 0))
-        corte_inferior = float(request.form.get('corte_inf', 0))
+    return usuario_premium, es_pro, creditos_actuales, user
 
-        # NUEVO: rango de duración elegido por el usuario (evita intro/outro)
-        inicio_seg = float(request.form.get('inicio_seg', 0))
-        fin_seg_raw = request.form.get('fin_seg', '')
-        fin_seg = float(fin_seg_raw) if fin_seg_raw else None
+@app.route('/procesar', methods=['POST'])
+def procesar():
+    usuario_premium, es_pro, creditos_actuales, _ = _estado_usuario_actual()
 
-        # NUEVO: título y autor personalizados opcionales para la primera página
-        titulo = request.form.get('titulo', '').strip()
-        autor = request.form.get('autor', '').strip()
-        
-        if file:
-            video_path = os.path.join(UPLOAD_FOLDER, file.filename)
-            file.save(video_path)
-            
-            pdf_filename = "tu_partitura.pdf"
-            pdf_path = os.path.join(UPLOAD_FOLDER, pdf_filename)
-            
-            exito = procesar_video_partitura(
-                video_path, 
-                pdf_path, 
-                formato_horizontal=es_horizontal,
-                corte_sup=corte_superior,
-                corte_inf=corte_inferior,
-                es_premium=usuario_premium,
-                inicio_seg=inicio_seg,
-                fin_seg=fin_seg,
-                titulo=titulo,
-                autor=autor
-            )
-            
-            if os.path.exists(video_path):
-                os.remove(video_path)
-                
-            if exito:
-                if not es_pro and creditos_actuales > 0:
-                    descontar_credito_gratis(g.device_id)
-                return send_file(pdf_path, as_attachment=True)
-            else:
-                return "Something went wrong while processing your video. Please try a different video or trim it further.", 500
-                
-    return render_template('index.html', usuario_premium=usuario_premium, es_pro=es_pro, creditos=creditos_actuales)
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video file was uploaded.'}), 400
+
+    file = request.files['video']
+    if file.filename == '':
+        return jsonify({'error': 'No video file was selected.'}), 400
+
+    formato = request.form.get('formato')
+    es_horizontal = True if formato == '2' else False
+    corte_superior = float(request.form.get('corte_sup', 0))
+    corte_inferior = float(request.form.get('corte_inf', 0))
+    inicio_seg = float(request.form.get('inicio_seg', 0))
+    fin_seg_raw = request.form.get('fin_seg', '')
+    fin_seg = float(fin_seg_raw) if fin_seg_raw else None
+    titulo = request.form.get('titulo', '').strip()
+    autor = request.form.get('autor', '').strip()
+
+    # NUEVO: nombres únicos por trabajo — con el nombre fijo de antes, dos
+    # personas subiendo un vídeo a la vez se pisaban los archivos entre sí.
+    job_id = uuid.uuid4().hex
+    _, extension = os.path.splitext(file.filename)
+    video_path = os.path.join(UPLOAD_FOLDER, f"{job_id}{extension}")
+    file.save(video_path)
+    pdf_path = os.path.join(UPLOAD_FOLDER, f"{job_id}.pdf")
+
+    parametros = dict(
+        formato_horizontal=es_horizontal,
+        corte_sup=corte_superior,
+        corte_inf=corte_inferior,
+        es_premium=usuario_premium,
+        inicio_seg=inicio_seg,
+        fin_seg=fin_seg,
+        titulo=titulo,
+        autor=autor,
+    )
+
+    TRABAJOS[job_id] = {'estado': 'procesando'}
+    hilo = threading.Thread(
+        target=procesar_en_segundo_plano,
+        args=(job_id, video_path, pdf_path, parametros, g.device_id, es_pro, creditos_actuales > 0),
+        daemon=True,
+    )
+    hilo.start()
+
+    return jsonify({'job_id': job_id}), 202
+
+@app.route('/estado/<job_id>')
+def estado_trabajo(job_id):
+    trabajo = TRABAJOS.get(job_id)
+    if not trabajo:
+        return jsonify({'estado': 'error', 'mensaje': 'This job could not be found (it may have expired).'}), 404
+    return jsonify({'estado': trabajo['estado'], 'mensaje': trabajo.get('mensaje', '')})
+
+@app.route('/descargar/<job_id>')
+def descargar_trabajo(job_id):
+    trabajo = TRABAJOS.get(job_id)
+    if not trabajo or trabajo.get('estado') != 'listo':
+        return "This file isn't ready yet.", 404
+    pdf_path = trabajo['pdf_path']
+    TRABAJOS.pop(job_id, None)
+    return send_file(pdf_path, as_attachment=True, download_name='tu_partitura.pdf')
 
 @app.route('/comprar/<tipo>')
 def comprar(tipo):
