@@ -100,8 +100,9 @@ def index():
         fin_seg_raw = request.form.get('fin_seg', '')
         fin_seg = float(fin_seg_raw) if fin_seg_raw else None
 
-        # NUEVO: título personalizado opcional para la primera página
+        # NUEVO: título y autor personalizados opcionales para la primera página
         titulo = request.form.get('titulo', '').strip()
+        autor = request.form.get('autor', '').strip()
         
         if file:
             video_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -119,7 +120,8 @@ def index():
                 es_premium=usuario_premium,
                 inicio_seg=inicio_seg,
                 fin_seg=fin_seg,
-                titulo=titulo
+                titulo=titulo,
+                autor=autor
             )
             
             if os.path.exists(video_path):
