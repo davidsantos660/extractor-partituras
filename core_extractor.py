@@ -11,9 +11,12 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     SALTAR_SEGUNDOS = 3  # Aumentamos el salto para procesar el video un 50% más rápido y evitar Timeouts
     UMBRAL_DUPLICADOS = 95.0  # Porcentaje de similitud
     PENTAGRAMAS_POR_FILA = 2
-    ALTO_TITULO = 130  # NUEVO: espacio reservado arriba de la primera página si hay título/autor
+    ALTO_TITULO = 130  # Space reserved at the top of page 1 for the title/author/brand
     titulo = (titulo or "").strip()
     autor = (autor or "").strip()
+
+    # NOTE: placeholder brand name — change this later once you pick a final name for the site
+    BRAND_NAME = "Music Sheet Xtractor"
 
     # NUEVO: fuentes personalizadas (limpias) con fallback seguro a la fuente por defecto de Pillow
     RUTA_FUENTE_TITULO = os.path.join(BASE_DIR, "static", "fonts", "Poppins-SemiBold.ttf")
@@ -155,25 +158,35 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     pagina_actual = crear_nueva_pagina()
     alto_maximo_util = ALTO_PAGINA - MARGEN_TECHO
 
-    # NUEVO: si hay título o autor, la primera página empieza más abajo para dejarle sitio arriba
-    margen_techo_primera = MARGEN_TECHO + ALTO_TITULO if (titulo or autor) else MARGEN_TECHO
+    # NOTE: the top space is now always reserved on page 1, since the brand name always shows there
+    margen_techo_primera = MARGEN_TECHO + ALTO_TITULO
 
-    # NUEVO: umbral real de difuminado — a partir de este segundo del video, los usuarios gratuitos ven el contenido borroso
+    # Free users see the content blurred past this point in the video (heavy blur — visible but unusable)
     SEGUNDOS_GRATIS = 30
     umbral_borroso_seg = segundo_inicio + SEGUNDOS_GRATIS
+    RADIO_DESENFOQUE = 24
+
+    contador_fragmentos_gratis = 0
+    marcas_de_agua = {}  # page index -> list of (x_center, y_center) where the watermark text goes
 
     def preparar_fragmento(frag_img, momento_seg):
-        # NUEVO: difumina el fragmento en sí (no la página entera) si toca según su segundo real
-        if not es_premium and momento_seg > umbral_borroso_seg:
-            return frag_img.filter(ImageFilter.GaussianBlur(radius=6)), True
-        return frag_img, False
+        nonlocal contador_fragmentos_gratis
+        if es_premium:
+            return frag_img, False, False
+
+        contador_fragmentos_gratis += 1
+        marcar_agua = (contador_fragmentos_gratis % 2 == 0)  # every other fragment, so it's not too intrusive
+
+        if momento_seg > umbral_borroso_seg:
+            return frag_img.filter(ImageFilter.GaussianBlur(radius=RADIO_DESENFOQUE)), True, marcar_agua
+        return frag_img, False, marcar_agua
 
     if formato_horizontal:
         columna = 0
         alto_maximo_fila = 0
         y_actual = margen_techo_primera
         for frag_img, momento_seg in fragmentos_unicos:
-            frag, es_borroso = preparar_fragmento(frag_img, momento_seg)
+            frag, es_borroso, marcar_agua = preparar_fragmento(frag_img, momento_seg)
             if columna >= PENTAGRAMAS_POR_FILA:
                 columna = 0
                 y_actual += alto_maximo_fila + ESPACIO_VERTICAL
@@ -189,13 +202,15 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             pagina_actual.paste(frag, (x_pos, y_actual))
             if es_borroso:
                 paginas_con_borroso.add(pagina_actual_indice)
+            if marcar_agua:
+                marcas_de_agua.setdefault(pagina_actual_indice, []).append((x_pos + frag.width / 2, y_actual + frag.height / 2))
             columna += 1
             if frag.height > alto_maximo_fila:
                 alto_maximo_fila = frag.height
     else:
         y_actual = margen_techo_primera
         for frag_img, momento_seg in fragmentos_unicos:
-            frag, es_borroso = preparar_fragmento(frag_img, momento_seg)
+            frag, es_borroso, marcar_agua = preparar_fragmento(frag_img, momento_seg)
             if y_actual + frag.height > alto_maximo_util:
                 paginas_creadas.append(pagina_actual)
                 pagina_actual_indice += 1
@@ -204,28 +219,61 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             pagina_actual.paste(frag, (MARGEN_LADO, y_actual))
             if es_borroso:
                 paginas_con_borroso.add(pagina_actual_indice)
+            if marcar_agua:
+                marcas_de_agua.setdefault(pagina_actual_indice, []).append((MARGEN_LADO + frag.width / 2, y_actual + frag.height / 2))
             y_actual += frag.height + ESPACIO_VERTICAL
             
     paginas_creadas.append(pagina_actual)
 
-    # NUEVO: dibujar el título (centrado) y el autor (arriba a la derecha) en la primera página
-    if (titulo or autor) and paginas_creadas:
+    # Title, author and brand name on page 1.
+    # - With a title: title centered, author top-right (if given), brand name in small text
+    #   right below wherever the author line is (or in its place, if there's no author).
+    # - Without a title: the brand name becomes a small subtitle in the title's place instead,
+    #   so the page doesn't end up with a floating brand line and no title above it.
+    if paginas_creadas:
         draw_titulo = ImageDraw.Draw(paginas_creadas[0])
+        fuente_marca = cargar_fuente(RUTA_FUENTE_AUTOR, 20, 18)
 
         if titulo:
             fuente_titulo = cargar_fuente(RUTA_FUENTE_TITULO, 46, 44)
             draw_titulo.text((ANCHO_PAGINA // 2, MARGEN_TECHO + 40), titulo, fill=(15, 23, 42), font=fuente_titulo, anchor="mm")
 
-        if autor:
-            fuente_autor = cargar_fuente(RUTA_FUENTE_AUTOR, 26, 24)
-            draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), autor, fill=(71, 85, 105), font=fuente_autor, anchor="rm")
+            if autor:
+                fuente_autor = cargar_fuente(RUTA_FUENTE_AUTOR, 26, 24)
+                draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), autor, fill=(71, 85, 105), font=fuente_autor, anchor="rm")
+                draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 112), BRAND_NAME, fill=(148, 163, 184), font=fuente_marca, anchor="rm")
+            else:
+                draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), BRAND_NAME, fill=(148, 163, 184), font=fuente_marca, anchor="rm")
+        else:
+            draw_titulo.text((ANCHO_PAGINA // 2, MARGEN_TECHO + 40), BRAND_NAME, fill=(148, 163, 184), font=fuente_marca, anchor="mm")
 
+            if autor:
+                fuente_autor = cargar_fuente(RUTA_FUENTE_AUTOR, 26, 24)
+                draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), autor, fill=(71, 85, 105), font=fuente_autor, anchor="rm")
+
+    # Subscribe message — bigger and bolder, on every page that actually has blurred content
     if not es_premium and paginas_con_borroso:
-        fuente_footer = ImageFont.load_default()
+        fuente_footer = cargar_fuente(RUTA_FUENTE_TITULO, 34, 30)
         for idx in sorted(paginas_con_borroso):
             draw = ImageDraw.Draw(paginas_creadas[idx])
-            msg_intl = "🔒 Suscríbete a Pro para ver la partitura completa sin difuminar."
-            draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA - 40), msg_intl, fill=(51, 65, 85), font=fuente_footer, anchor="mm")
+            msg = "🔒 Subscribe to Pro to unlock the full, unblurred sheet music"
+            caja = draw.textbbox((ANCHO_PAGINA // 2, ALTO_PAGINA - 55), msg, font=fuente_footer, anchor="mm")
+            padding = 14
+            draw.rectangle(
+                (caja[0] - padding, caja[1] - padding, caja[2] + padding, caja[3] + padding),
+                fill=(15, 23, 42)
+            )
+            draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA - 55), msg, fill=(255, 255, 255), font=fuente_footer, anchor="mm")
+
+    # Translucent brand watermark on free-tier pages, over every other fragment
+    if not es_premium and marcas_de_agua:
+        fuente_marca_agua = cargar_fuente(RUTA_FUENTE_AUTOR, 24, 22)
+        for idx, posiciones in marcas_de_agua.items():
+            capa = Image.new("RGBA", paginas_creadas[idx].size, (0, 0, 0, 0))
+            draw_capa = ImageDraw.Draw(capa)
+            for (cx, cy) in posiciones:
+                draw_capa.text((cx, cy), BRAND_NAME, fill=(100, 116, 139, 90), font=fuente_marca_agua, anchor="mm")
+            paginas_creadas[idx] = Image.alpha_composite(paginas_creadas[idx].convert("RGBA"), capa).convert("RGB")
 
     if paginas_creadas and len(paginas_creadas) > 0:
         try:
@@ -241,7 +289,7 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
                 
             return True
         except Exception as e:
-            print(f"Error crítico al guardar el PDF: {e}")
+            print(f"Critical error while saving the PDF: {e}")
             return False
             
     return False
