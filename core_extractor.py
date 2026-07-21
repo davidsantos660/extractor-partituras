@@ -2,7 +2,7 @@ import cv2
 import os
 import glob
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=True, corte_sup=0, corte_inf=0, es_premium=False, inicio_seg=0, fin_seg=None, titulo="", autor=""):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -133,7 +133,8 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
                 if img_limpia is not None:
                     factor = ancho_bloque / img_limpia.width
                     img_resoli = img_limpia.resize((ancho_bloque, int(img_limpia.height * factor)), Image.Resampling.LANCZOS)
-                    fragmentos_unicos.append(img_resoli)
+                    momento_seg = count / fps  # NUEVO: segundo exacto del video en que se capturó este fragmento
+                    fragmentos_unicos.append((img_resoli, momento_seg))
                     ultimo_frame_procesado = frame_recortado.copy()
                     
         count += skip_frames
@@ -145,6 +146,9 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
         return False
 
     paginas_creadas = []
+    paginas_con_borroso = set()
+    pagina_actual_indice = 0
+
     def crear_nueva_pagina():
         return Image.new("RGB", (ANCHO_PAGINA, ALTO_PAGINA), (255, 255, 255))
     
@@ -154,34 +158,52 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     # NUEVO: si hay título o autor, la primera página empieza más abajo para dejarle sitio arriba
     margen_techo_primera = MARGEN_TECHO + ALTO_TITULO if (titulo or autor) else MARGEN_TECHO
 
+    # NUEVO: umbral real de difuminado — a partir de este segundo del video, los usuarios gratuitos ven el contenido borroso
+    SEGUNDOS_GRATIS = 30
+    umbral_borroso_seg = segundo_inicio + SEGUNDOS_GRATIS
+
+    def preparar_fragmento(frag_img, momento_seg):
+        # NUEVO: difumina el fragmento en sí (no la página entera) si toca según su segundo real
+        if not es_premium and momento_seg > umbral_borroso_seg:
+            return frag_img.filter(ImageFilter.GaussianBlur(radius=6)), True
+        return frag_img, False
+
     if formato_horizontal:
         columna = 0
         alto_maximo_fila = 0
         y_actual = margen_techo_primera
-        for frag in fragmentos_unicos:
+        for frag_img, momento_seg in fragmentos_unicos:
+            frag, es_borroso = preparar_fragmento(frag_img, momento_seg)
             if columna >= PENTAGRAMAS_POR_FILA:
                 columna = 0
                 y_actual += alto_maximo_fila + ESPACIO_VERTICAL
                 alto_maximo_fila = 0
             if y_actual + frag.height > alto_maximo_util:
                 paginas_creadas.append(pagina_actual)
+                pagina_actual_indice += 1
                 pagina_actual = crear_nueva_pagina()
                 columna = 0
                 y_actual = MARGEN_TECHO
                 alto_maximo_fila = 0
             x_pos = MARGEN_LADO + (columna * (ancho_bloque + ESPACIO_HORIZONTAL))
             pagina_actual.paste(frag, (x_pos, y_actual))
+            if es_borroso:
+                paginas_con_borroso.add(pagina_actual_indice)
             columna += 1
             if frag.height > alto_maximo_fila:
                 alto_maximo_fila = frag.height
     else:
         y_actual = margen_techo_primera
-        for frag in fragmentos_unicos:
+        for frag_img, momento_seg in fragmentos_unicos:
+            frag, es_borroso = preparar_fragmento(frag_img, momento_seg)
             if y_actual + frag.height > alto_maximo_util:
                 paginas_creadas.append(pagina_actual)
+                pagina_actual_indice += 1
                 pagina_actual = crear_nueva_pagina()
                 y_actual = MARGEN_TECHO
             pagina_actual.paste(frag, (MARGEN_LADO, y_actual))
+            if es_borroso:
+                paginas_con_borroso.add(pagina_actual_indice)
             y_actual += frag.height + ESPACIO_VERTICAL
             
     paginas_creadas.append(pagina_actual)
@@ -198,16 +220,12 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             fuente_autor = cargar_fuente(RUTA_FUENTE_AUTOR, 26, 24)
             draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), autor, fill=(71, 85, 105), font=fuente_autor, anchor="rm")
 
-    if not es_premium:
+    if not es_premium and paginas_con_borroso:
         fuente_footer = ImageFont.load_default()
-        for idx in range(len(paginas_creadas)):
-            if idx >= 1:
-                draw = ImageDraw.Draw(paginas_creadas[idx])
-                msg_centro = "🔒 PRO VERSION REQUIRED TO UNLOCK FULL PAGES"
-                draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA // 2), msg_centro, fill=(203, 213, 225), font=fuente_footer, anchor="mm")
-                
-                msg_intl = "🔒 To unlock the complete high-resolution sheet music, please subscribe to Pro."
-                draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA - 80), msg_intl, fill=(71, 85, 105), font=fuente_footer, anchor="mm")
+        for idx in sorted(paginas_con_borroso):
+            draw = ImageDraw.Draw(paginas_creadas[idx])
+            msg_intl = "🔒 Suscríbete a Pro para ver la partitura completa sin difuminar."
+            draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA - 40), msg_intl, fill=(51, 65, 85), font=fuente_footer, anchor="mm")
 
     if paginas_creadas and len(paginas_creadas) > 0:
         try:
