@@ -4,15 +4,29 @@ import glob
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=True, corte_sup=0, corte_inf=0, es_premium=False, inicio_seg=0, fin_seg=None, titulo=""):
+def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=True, corte_sup=0, corte_inf=0, es_premium=False, inicio_seg=0, fin_seg=None, titulo="", autor=""):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     OUTPUT_DIR = os.path.join(BASE_DIR, "capturas_temporales")
     UMBRAL_MOVIMIENTO = 2.0
     SALTAR_SEGUNDOS = 3  # Aumentamos el salto para procesar el video un 50% más rápido y evitar Timeouts
     UMBRAL_DUPLICADOS = 95.0  # Porcentaje de similitud
     PENTAGRAMAS_POR_FILA = 2
-    ALTO_TITULO = 110  # NUEVO: espacio reservado arriba de la primera página si hay título
+    ALTO_TITULO = 130  # NUEVO: espacio reservado arriba de la primera página si hay título/autor
     titulo = (titulo or "").strip()
+    autor = (autor or "").strip()
+
+    # NUEVO: fuentes personalizadas (limpias) con fallback seguro a la fuente por defecto de Pillow
+    RUTA_FUENTE_TITULO = os.path.join(BASE_DIR, "static", "fonts", "Poppins-SemiBold.ttf")
+    RUTA_FUENTE_AUTOR = os.path.join(BASE_DIR, "static", "fonts", "Poppins-Regular.ttf")
+
+    def cargar_fuente(ruta, tamano, tamano_fallback):
+        try:
+            return ImageFont.truetype(ruta, tamano)
+        except Exception:
+            try:
+                return ImageFont.load_default(size=tamano_fallback)
+            except TypeError:
+                return ImageFont.load_default()
     
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -137,8 +151,8 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
     pagina_actual = crear_nueva_pagina()
     alto_maximo_util = ALTO_PAGINA - MARGEN_TECHO
 
-    # NUEVO: si hay título, la primera página empieza más abajo para dejarle sitio arriba
-    margen_techo_primera = MARGEN_TECHO + ALTO_TITULO if titulo else MARGEN_TECHO
+    # NUEVO: si hay título o autor, la primera página empieza más abajo para dejarle sitio arriba
+    margen_techo_primera = MARGEN_TECHO + ALTO_TITULO if (titulo or autor) else MARGEN_TECHO
 
     if formato_horizontal:
         columna = 0
@@ -172,15 +186,17 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             
     paginas_creadas.append(pagina_actual)
 
-    # NUEVO: dibujar el título arriba de la primera página, dentro del espacio reservado
-    if titulo and paginas_creadas:
+    # NUEVO: dibujar el título (centrado) y el autor (arriba a la derecha) en la primera página
+    if (titulo or autor) and paginas_creadas:
         draw_titulo = ImageDraw.Draw(paginas_creadas[0])
-        try:
-            fuente_titulo = ImageFont.load_default(size=44)
-        except TypeError:
-            # Versiones antiguas de Pillow no soportan el parámetro size en load_default
-            fuente_titulo = ImageFont.load_default()
-        draw_titulo.text((ANCHO_PAGINA // 2, MARGEN_TECHO + (ALTO_TITULO // 2)), titulo, fill=(15, 23, 42), font=fuente_titulo, anchor="mm")
+
+        if titulo:
+            fuente_titulo = cargar_fuente(RUTA_FUENTE_TITULO, 46, 44)
+            draw_titulo.text((ANCHO_PAGINA // 2, MARGEN_TECHO + 40), titulo, fill=(15, 23, 42), font=fuente_titulo, anchor="mm")
+
+        if autor:
+            fuente_autor = cargar_fuente(RUTA_FUENTE_AUTOR, 26, 24)
+            draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), autor, fill=(71, 85, 105), font=fuente_autor, anchor="rm")
 
     if not es_premium:
         fuente_footer = ImageFont.load_default()
