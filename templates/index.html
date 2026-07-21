@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SheetMusic Extractor Pro</title>
     <style>
-        /* NUEVO: misma fuente que se usa en el PDF, para que la previsualización sea fiel */
+        /* Same font used in the PDF, so the live preview matches the real output */
         @font-face {
             font-family: 'PartituraTitulo';
             src: url('/static/fonts/Poppins-SemiBold.ttf');
@@ -24,101 +24,113 @@
             {% if session.get('user_email') %}
                 <span>{{ session.get('user_email') }}</span>
                 {% if es_pro %}
-                    <span style="background-color:#10b981; color:#0f172a; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">MIEMBRO PRO</span>
+                    <span style="background-color:#10b981; color:#0f172a; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">PRO MEMBER</span>
                 {% elif creditos > 0 %}
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Hazte Pro (€1.00/mes)</a>
-                    <span style="background-color:#3b82f6; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} CRÉDITOS</span>
+                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Go Pro (€0.99/mo)</a>
+                    <span style="background-color:#3b82f6; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} CREDITS</span>
                 {% else %}
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Hazte Pro (€1.00/mes)</a>
-                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">CUENTA GRATIS ({{ creditos }} CRÉDITOS)</span>
+                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Go Pro (€0.99/mo)</a>
+                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">FREE ACCOUNT ({{ creditos }} CREDITS)</span>
                 {% endif %}
-                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Cerrar sesión</a>
+                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Sign Out</a>
             {% else %}
-                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px; font-size:14px;">Iniciar sesión</a>
-                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Registrarse</a>
+                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px; font-size:14px;">Log In</a>
+                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Sign Up</a>
             {% endif %}
         </div>
     </header>
 
     <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
         <main style="width:100%; max-width:550px; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
-            <form action="/" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga()">
-                <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">1. Sube tu vídeo de la partitura</label>
-                    <div style="border:2px dashed #334155; padding:20px; text-align:center; border-radius:12px; cursor:pointer; background-color:rgba(51,65,85,0.3);" onclick="document.getElementById('video-input').click()">
-                        <p id="texto-subida" style="margin:0; font-size:14px; color:#94a3b8;">Haz clic para buscar tu archivo de vídeo</p>
-                        <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
+            <form id="form-partitura" action="/" method="POST" enctype="multipart/form-data">
+                <div id="pasos-formulario">
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-size:14px; margin-bottom:8px;">1. Upload your sheet music video</label>
+                        <div style="border:2px dashed #334155; padding:20px; text-align:center; border-radius:12px; cursor:pointer; background-color:rgba(51,65,85,0.3);" onclick="document.getElementById('video-input').click()">
+                            <p id="texto-subida" style="margin:0; font-size:14px; color:#94a3b8;">Click to select your video file</p>
+                            <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
+                        </div>
                     </div>
-                </div>
 
-                <div id="contenedor-preview" style="display:none; width:100%; border-radius:12px; border:1px solid #334155; margin-bottom:16px; overflow:hidden;">
-                    <canvas id="canvas-preview" style="width:100%; display:block; height:auto;"></canvas>
-                </div>
+                    <div id="contenedor-preview" style="display:none; width:100%; border-radius:12px; border:1px solid #334155; margin-bottom:16px; overflow:hidden;">
+                        <canvas id="canvas-preview" style="width:100%; display:block; height:auto;"></canvas>
+                    </div>
 
-                <!-- NUEVO: bloque para recortar la duración y evitar intro/outro sin partitura -->
-                <div id="bloque-recorte-duracion" style="display:none; margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">2. Recorta la duración (evita intro/outro)</label>
-                    <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
-                        <div style="margin-bottom:10px;">
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                <span>Inicio</span><span id="txt-inicio">0:00</span>
+                    <div id="bloque-recorte-duracion" style="display:none; margin-bottom:20px;">
+                        <label style="display:block; font-size:14px; margin-bottom:8px;">2. Trim the duration (skip intro/outro)</label>
+                        <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
+                            <div style="margin-bottom:10px;">
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>Start</span><span id="txt-inicio">0:00</span>
+                                </div>
+                                <input type="range" id="rango_inicio" min="0" max="100" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('inicio')">
                             </div>
-                            <input type="range" id="rango_inicio" min="0" max="100" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('inicio')">
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                <span>Fin</span><span id="txt-fin">0:00</span>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                                    <span>End</span><span id="txt-fin">0:00</span>
+                                </div>
+                                <input type="range" id="rango_fin" min="0" max="100" value="100" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('fin')">
                             </div>
-                            <input type="range" id="rango_fin" min="0" max="100" value="100" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('fin')">
+                        </div>
+                        <input type="hidden" name="inicio_seg" id="input_inicio_seg" value="0">
+                        <input type="hidden" name="fin_seg" id="input_fin_seg" value="">
+                    </div>
+
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-size:14px; margin-bottom:8px;">3. Adjust the sheet music area</label>
+                        <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
+                            <div style="margin-bottom:10px;">
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Top</span><span><span id="val-sup">0</span>%</span></div>
+                                <input type="range" name="corte_sup" id="corte_sup" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Bottom</span><span><span id="val-inf">0</span>%</span></div>
+                                <input type="range" name="corte_inf" id="corte_inf" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                            </div>
                         </div>
                     </div>
-                    <input type="hidden" name="inicio_seg" id="input_inicio_seg" value="0">
-                    <input type="hidden" name="fin_seg" id="input_fin_seg" value="">
-                </div>
 
-                <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Ajusta el área de la partitura</label>
-                    <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
-                        <div style="margin-bottom:10px;">
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Techo (Arriba)</span><span><span id="val-sup">0</span>%</span></div>
-                            <input type="range" name="corte_sup" id="corte_sup" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-size:14px; margin-bottom:8px;">4. Output format</label>
+                        <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
+                            <option value="1" selected>Vertical (1 per row - best for printing or a stand)</option>
+                            <option value="2">Horizontal (2 per row - best for computer screens)</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; font-size:14px; margin-bottom:8px;">5. Song title and author (optional)</label>
+                        <div style="display:flex; gap:10px; margin-bottom:12px;">
+                            <input type="text" name="titulo" id="input-titulo" placeholder="Song title" maxlength="80" oninput="actualizarPreviewTitulo()" style="flex:2; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
+                            <input type="text" name="autor" id="input-autor" placeholder="Author / artist" maxlength="50" oninput="actualizarPreviewTitulo()" style="flex:1; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
                         </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Suelo (Abajo)</span><span><span id="val-inf">0</span>%</span></div>
-                            <input type="range" name="corte_inf" id="corte_inf" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
+
+                        <!-- Live preview, using the real font/layout that will be used in the PDF -->
+                        <div id="preview-titulo-caja" style="background-color:#f8fafc; border-radius:8px; padding:14px 18px; position:relative; min-height:50px;">
+                            <div id="preview-titulo-texto" style="font-family:'PartituraTitulo', sans-serif; color:#0f172a; font-size:20px; text-align:center;"></div>
+                            <div id="preview-marca-bajo-titulo" style="font-family:'PartituraAutor', sans-serif; color:#94a3b8; font-size:11px; text-align:center; font-style:italic;">Music Sheet Xtractor</div>
+                            <div id="preview-autor-texto" style="font-family:'PartituraAutor', sans-serif; color:#475569; font-size:12px; text-align:right; margin-top:4px;"></div>
+                            <div id="preview-marca-bajo-autor" style="font-family:'PartituraAutor', sans-serif; color:#94a3b8; font-size:10px; text-align:right; font-style:italic;"></div>
                         </div>
                     </div>
+
+                    <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Process and Download PDF</button>
+                    <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Trimming margins... this can take a minute.</div>
+                    <div id="error-box" style="display:none; text-align:center; color:#f87171; font-weight:600; padding:10px; font-size:14px;"></div>
                 </div>
 
-                <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">4. Formato de salida</label>
-                    <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
-                        <option value="1" selected>Vertical (1 por fila - Ideal para imprimir o atril)</option>
-                        <option value="2">Horizontal (2 por fila - Ideal para pantallas de PC)</option>
-                    </select>
+                <!-- Shown after a successful PDF download, instead of the form -->
+                <div id="pantalla-exito" style="display:none; text-align:center; padding:20px 0;">
+                    <p style="font-size:40px; margin:0;">✅</p>
+                    <p style="font-size:16px; font-weight:600; margin:10px 0 4px;">Your PDF is ready and downloading!</p>
+                    <p style="font-size:13px; color:#94a3b8; margin:0 0 20px;">Want to extract another song?</p>
+                    <button type="button" onclick="generarOtraVez()" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🔁 Generate another sheet</button>
                 </div>
-
-                <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">5. Título y autor (opcional)</label>
-                    <div style="display:flex; gap:10px; margin-bottom:12px;">
-                        <input type="text" name="titulo" id="input-titulo" placeholder="Título de la canción" maxlength="80" oninput="actualizarPreviewTitulo()" style="flex:2; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
-                        <input type="text" name="autor" id="input-autor" placeholder="Autor / artista" maxlength="50" oninput="actualizarPreviewTitulo()" style="flex:1; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
-                    </div>
-
-                    <!-- NUEVO: previsualización en vivo, con la fuente real que se usará en el PDF -->
-                    <div id="preview-titulo-caja" style="display:none; background-color:#f8fafc; border-radius:8px; padding:14px 18px; position:relative; min-height:50px;">
-                        <div id="preview-titulo-texto" style="font-family:'PartituraTitulo', sans-serif; color:#0f172a; font-size:20px; text-align:center;"></div>
-                        <div id="preview-autor-texto" style="font-family:'PartituraAutor', sans-serif; color:#475569; font-size:12px; text-align:right; margin-top:4px;"></div>
-                    </div>
-                </div>
-
-                <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Procesar y Descargar PDF</button>
-                <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Recortando márgenes... Esto puede tardar un minuto.</div>
             </form>
         </main>
     </div>
 
-    <footer style="padding:16px; text-align:center; font-size:11px; color:#475569; background-color:#020617; border-top:1px solid #1e293b;">Hecho por músicos para músicos.</footer>
+    <footer style="padding:16px; text-align:center; font-size:11px; color:#475569; background-color:#020617; border-top:1px solid #1e293b;">Made by musicians, for musicians.</footer>
     <video id="video-oculto" style="display:none;"></video>
 
     <script>
@@ -127,11 +139,6 @@
         let ctx = canvas.getContext('2d');
         let fotogramaCargado = false;
 
-        function mostrarCarga() {
-            document.getElementById('btn-submit').style.display = 'none';
-            document.getElementById('loading').style.display = 'block';
-        }
-
         function procesarVideoLocal(e) {
             const f = e.target.files; if (!f || f.length === 0) return;
             document.getElementById('texto-subida').innerText = f[0].name;
@@ -139,7 +146,6 @@
             videoOculto.onloadedmetadata = () => {
                 videoOculto.currentTime = 15;
 
-                // NUEVO: mostrar el bloque de recorte de duración y fijar el rango completo por defecto
                 document.getElementById('bloque-recorte-duracion').style.display = 'block';
                 document.getElementById('rango_inicio').value = 0;
                 document.getElementById('rango_fin').value = 100;
@@ -172,7 +178,6 @@
             dibujarGuias();
         }
 
-        // NUEVO: lógica del recorte de duración (intro/outro)
         function formatearTiempo(seg) {
             const m = Math.floor(seg / 60);
             const s = Math.floor(seg % 60).toString().padStart(2, '0');
@@ -186,7 +191,6 @@
             let inicio = parseFloat(document.getElementById('rango_inicio').value) / 100 * duracion;
             let fin = parseFloat(document.getElementById('rango_fin').value) / 100 * duracion;
 
-            // Evita que el inicio se pase del fin (y viceversa)
             if (inicio >= fin) {
                 if (origen === 'fin') {
                     fin = Math.min(duracion, inicio + 1);
@@ -202,22 +206,79 @@
             document.getElementById('input_inicio_seg').value = inicio.toFixed(2);
             document.getElementById('input_fin_seg').value = fin.toFixed(2);
 
-            // NUEVO: mueve la preview al frame de INICIO o de FIN según el slider que hayas movido tú
-            // Si el punto es el segundo 0 exacto, algunos navegadores muestran un frame en negro
-            // porque aún no lo han decodificado — saltamos a una fracción de segundo después solo para la vista previa.
+            // Browsers sometimes show a black frame when seeking to the exact 0.0 mark
+            // (the first frame isn't decoded yet) — nudge slightly forward just for the preview.
             const tiempoParaVerPreview = (origen === 'fin') ? fin : Math.max(inicio, 0.08);
             videoOculto.currentTime = tiempoParaVerPreview;
         }
-        // NUEVO: previsualización en vivo del título/autor, con la misma fuente del PDF
+
+        // Live preview of title/author, matching the real PDF layout:
+        // - With a title: the brand name sits below the author (top-right).
+        // - Without a title: the brand name becomes a small subtitle instead.
         function actualizarPreviewTitulo() {
             const titulo = document.getElementById('input-titulo').value.trim();
             const autor = document.getElementById('input-autor').value.trim();
-            const caja = document.getElementById('preview-titulo-caja');
 
-            document.getElementById('preview-titulo-texto').innerText = titulo;
+            document.getElementById('preview-titulo-texto').innerText = titulo || 'Song title';
             document.getElementById('preview-autor-texto').innerText = autor;
 
-            caja.style.display = (titulo || autor) ? 'block' : 'none';
+            const marcaBajoTitulo = document.getElementById('preview-marca-bajo-titulo');
+            const marcaBajoAutor = document.getElementById('preview-marca-bajo-autor');
+
+            if (titulo) {
+                marcaBajoTitulo.style.display = 'none';
+                marcaBajoAutor.style.display = 'block';
+                marcaBajoAutor.innerText = 'Music Sheet Xtractor';
+            } else {
+                marcaBajoTitulo.style.display = 'block';
+                marcaBajoAutor.style.display = 'none';
+            }
+        }
+        actualizarPreviewTitulo();
+
+        // Submit the form with fetch so we can show a "generate another" screen
+        // instead of leaving the page stuck on the loading state after the download.
+        document.getElementById('form-partitura').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            document.getElementById('btn-submit').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error-box').style.display = 'none';
+
+            const datos = new FormData(this);
+
+            fetch('/', { method: 'POST', body: datos })
+                .then(async (respuesta) => {
+                    if (!respuesta.ok) {
+                        const texto = await respuesta.text();
+                        throw new Error(texto || 'Something went wrong while processing the video.');
+                    }
+                    return respuesta.blob();
+                })
+                .then((blob) => {
+                    const url = window.URL.createObjectURL(blob);
+                    const enlace = document.createElement('a');
+                    enlace.href = url;
+                    enlace.download = 'sheet_music.pdf';
+                    document.body.appendChild(enlace);
+                    enlace.click();
+                    enlace.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    document.getElementById('pasos-formulario').style.display = 'none';
+                    document.getElementById('pantalla-exito').style.display = 'block';
+                })
+                .catch((error) => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('btn-submit').style.display = 'block';
+                    const caja = document.getElementById('error-box');
+                    caja.innerText = '⚠️ ' + error.message;
+                    caja.style.display = 'block';
+                });
+        });
+
+        function generarOtraVez() {
+            window.location.reload();
         }
     </script>
 </body>
