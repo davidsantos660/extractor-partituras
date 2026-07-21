@@ -38,7 +38,7 @@ def inicializar_base_de_datos():
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             is_pro INT DEFAULT 0,
-            creditos INT DEFAULT 0
+            creditos INT DEFAULT 3
         )
     ''')
     conn.commit()
@@ -147,13 +147,9 @@ def comprar(tipo):
         return redirect(url_for('login'))
         
     try:
-        if tipo == 'credito':
-            nombre_prod = "1 Crédito de Partitura Completa"
-            precio_centimos = 95 
-            modo_pago = "payment"
-        elif tipo == 'suscripcion':
+        if tipo == 'suscripcion':
             nombre_prod = "Suscripción Mensual SheetMusic Pro"
-            precio_centimos = 299 
+            precio_centimos = 100 
             modo_pago = "subscription"
         else:
             return "Plan no válido"
@@ -187,12 +183,11 @@ def pago_exitoso(tipo):
     conn = obtener_conexion_db()
     cursor = conn.cursor()
     
-    if tipo == 'credito':
-        cursor.execute('UPDATE usuarios SET creditos = creditos + 1 WHERE email = %s', (email,))
-        mensaje = "Has añadido 1 crédito de descarga suelta con éxito. 🎉"
-    elif tipo == 'suscripcion':
+    if tipo == 'suscripcion':
         cursor.execute('UPDATE usuarios SET is_pro = 1 WHERE email = %s', (email,))
         mensaje = "¡Te has suscrito con éxito a SheetMusic Pro! 🎉"
+    else:
+        mensaje = "Pago procesado."
         
     conn.commit()
     cursor.close()
@@ -218,7 +213,7 @@ def registro():
         conn = obtener_conexion_db()
         cursor = conn.cursor()
         try:
-            cursor.execute('INSERT INTO usuarios (email, password) VALUES (%s, %s)', (email, password_encriptada))
+            cursor.execute('INSERT INTO usuarios (email, password, creditos) VALUES (%s, %s, %s)', (email, password_encriptada, 3))
             conn.commit()
             session.permanent = True  
             session['user_email'] = email
