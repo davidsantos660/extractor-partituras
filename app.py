@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash
+from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash, g
 import os
+import secrets
 import psycopg2
 import psycopg2.extras  # CORRECCIÓN CRÍTICA: Importación explícita para que DictCursor funcione
 import stripe
@@ -41,11 +42,77 @@ def inicializar_base_de_datos():
             creditos INT DEFAULT 3
         )
     ''')
+    # NUEVO: los créditos gratuitos ya NO dependen de la cuenta (columna 'creditos'
+    # de arriba, que se deja sin usar para no romper instalaciones existentes).
+    # Se asignan por dispositivo (cookie persistente), así que registrarse o no
+    # registrarse no da ni quita créditos — evita el abuso de crear cuentas infinitas.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS creditos_gratis (
+            device_id TEXT PRIMARY KEY,
+            creditos INT DEFAULT 3
+        )
+    ''')
     conn.commit()
     cursor.close()
     conn.close()
 
 inicializar_base_de_datos()
+
+# =====================================================================
+# CRÉDITOS GRATUITOS POR DISPOSITIVO (no por cuenta)
+# =====================================================================
+COOKIE_DEVICE_ID = "device_id"
+DOS_ANOS_SEGUNDOS = 60 * 60 * 24 * 365 * 2
+
+@app.before_request
+def preparar_device_id():
+    # Si el navegador no trae cookie de dispositivo, generamos una nueva.
+    # No la guardamos en la cookie todavía: eso se hace en after_request,
+    # una vez que ya tenemos la respuesta a la que añadirle el set_cookie.
+    if request.cookies.get(COOKIE_DEVICE_ID):
+        g.device_id = request.cookies.get(COOKIE_DEVICE_ID)
+        g.device_id_es_nuevo = False
+    else:
+        g.device_id = secrets.token_hex(16)
+        g.device_id_es_nuevo = True
+
+@app.after_request
+def guardar_device_id(response):
+    if getattr(g, "device_id_es_nuevo", False):
+        response.set_cookie(
+            COOKIE_DEVICE_ID, g.device_id,
+            max_age=DOS_ANOS_SEGUNDOS, httponly=True, samesite="Lax"
+        )
+    return response
+
+def obtener_creditos_gratis(device_id):
+    conn = obtener_conexion_db()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT creditos FROM creditos_gratis WHERE device_id = %s', (device_id,))
+    fila = cursor.fetchone()
+    if fila is None:
+        cursor.execute(
+            'INSERT INTO creditos_gratis (device_id, creditos) VALUES (%s, %s) ON CONFLICT (device_id) DO NOTHING',
+            (device_id, 3)
+        )
+        conn.commit()
+        creditos = 3
+    else:
+        creditos = fila['creditos']
+    cursor.close()
+    conn.close()
+    return creditos
+
+def descontar_credito_gratis(device_id):
+    conn = obtener_conexion_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE creditos_gratis SET creditos = creditos - 1 WHERE device_id = %s AND creditos > 0',
+        (device_id,)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 # =====================================================================
 # CONFIGURACIÓN INDUSTRIAL DE STRIPE (VARIABLES DE ENTORNO SEGURAS)
@@ -62,9 +129,12 @@ def index():
     usuario_premium = False
     es_pro = False
     email_usuario = session.get('user_email')
-    creditos_actuales = 0
     user = None
-    
+
+    # Los créditos gratuitos son por dispositivo, no por cuenta: da igual si el
+    # visitante está registrado, ha iniciado sesión o no ha hecho nada de eso.
+    creditos_actuales = obtener_creditos_gratis(g.device_id)
+
     if email_usuario:
         conn = obtener_conexion_db()
         # CORRECCIÓN: Sintaxis correcta invocando el módulo extras importado
@@ -73,14 +143,14 @@ def index():
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-        
-        if user:
-            creditos_actuales = user['creditos']
-            if user['is_pro'] == 1:
-                es_pro = True
-                usuario_premium = True
-            elif user['creditos'] > 0:
-                usuario_premium = True
+
+        if user and user['is_pro'] == 1:
+            es_pro = True
+            usuario_premium = True
+        elif creditos_actuales > 0:
+            usuario_premium = True
+    elif creditos_actuales > 0:
+        usuario_premium = True
 
     if request.method == 'POST':
         if 'video' not in request.files:
@@ -128,13 +198,8 @@ def index():
                 os.remove(video_path)
                 
             if exito:
-                if email_usuario and user and not user['is_pro'] and user['creditos'] > 0:
-                    conn = obtener_conexion_db()
-                    cursor = conn.cursor()
-                    cursor.execute('UPDATE usuarios SET creditos = creditos - 1 WHERE email = %s', (email_usuario,))
-                    conn.commit()
-                    cursor.close()
-                    conn.close()
+                if not es_pro and creditos_actuales > 0:
+                    descontar_credito_gratis(g.device_id)
                 return send_file(pdf_path, as_attachment=True)
             else:
                 return "Something went wrong while processing your video. Please try a different video or trim it further.", 500
@@ -213,7 +278,9 @@ def registro():
         conn = obtener_conexion_db()
         cursor = conn.cursor()
         try:
-            cursor.execute('INSERT INTO usuarios (email, password, creditos) VALUES (%s, %s, %s)', (email, password_encriptada, 3))
+            # NUEVO: no se asignan créditos aquí — los créditos gratuitos son por
+            # dispositivo (ver creditos_gratis), así que registrarse no da ni quita nada.
+            cursor.execute('INSERT INTO usuarios (email, password) VALUES (%s, %s)', (email, password_encriptada))
             conn.commit()
             session.permanent = True  
             session['user_email'] = email
