@@ -24,19 +24,18 @@
             {% if session.get('user_email') %}
                 <span>{{ session.get('user_email') }}</span>
                 {% if es_pro %}
-                    <span style="background-color:#10b981; color:#0f172a; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">PRO MEMBER</span>
+                    <span style="background-color:#10b981; color:#0f172a; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">MIEMBRO PRO</span>
                 {% elif creditos > 0 %}
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Upgrade to Pro (€2.99/mo)</a>
-                    <span style="background-color:#3b82f6; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} CREDITS LEFT</span>
+                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Hazte Pro (€1.00/mes)</a>
+                    <span style="background-color:#3b82f6; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} CRÉDITOS</span>
                 {% else %}
-                    <a href="/comprar/credito" style="color:#94a3b8; text-decoration:none; font-size:14px;">1 PDF (€0.95)</a>
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Upgrade to Pro (€2.99/mo)</a>
-                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">FREE ACCOUNT ({{ creditos }} CREDITS)</span>
+                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Hazte Pro (€1.00/mes)</a>
+                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">CUENTA GRATIS ({{ creditos }} CRÉDITOS)</span>
                 {% endif %}
-                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Sign Out</a>
+                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Cerrar sesión</a>
             {% else %}
-                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px; font-size:14px;">Log In</a>
-                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Sign Up</a>
+                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px; font-size:14px;">Iniciar sesión</a>
+                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Registrarse</a>
             {% endif %}
         </div>
     </header>
