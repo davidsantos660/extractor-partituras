@@ -82,6 +82,13 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
         MARGEN_LADO, MARGEN_TECHO, ESPACIO_VERTICAL = 70, 35, 10
         ancho_bloque = ANCHO_PAGINA - (MARGEN_LADO * 2)
 
+    # NUEVO: en la versión gratuita reservamos un poco más de hueco entre fragmentos
+    # para que la marca de agua quepa centrada en el espacio en blanco, sin pisar
+    # la partitura de arriba ni la de abajo.
+    ESPACIO_MARCA_AGUA = 24
+    if not es_premium:
+        ESPACIO_VERTICAL = ESPACIO_VERTICAL + ESPACIO_MARCA_AGUA
+
     fragmentos_unicos = []
     ultimo_frame_procesado = None
 
@@ -203,7 +210,9 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             if es_borroso:
                 paginas_con_borroso.add(pagina_actual_indice)
             if marcar_agua:
-                marcas_de_agua.setdefault(pagina_actual_indice, []).append((x_pos + frag.width / 2, y_actual + frag.height / 2))
+                # Centrada en el hueco blanco que queda justo debajo de este fragmento
+                y_hueco = y_actual + frag.height + (ESPACIO_VERTICAL / 2)
+                marcas_de_agua.setdefault(pagina_actual_indice, []).append((x_pos + frag.width / 2, y_hueco))
             columna += 1
             if frag.height > alto_maximo_fila:
                 alto_maximo_fila = frag.height
@@ -220,7 +229,9 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
             if es_borroso:
                 paginas_con_borroso.add(pagina_actual_indice)
             if marcar_agua:
-                marcas_de_agua.setdefault(pagina_actual_indice, []).append((MARGEN_LADO + frag.width / 2, y_actual + frag.height / 2))
+                # Centrada en el hueco blanco que queda justo debajo de este fragmento
+                y_hueco = y_actual + frag.height + (ESPACIO_VERTICAL / 2)
+                marcas_de_agua.setdefault(pagina_actual_indice, []).append((MARGEN_LADO + frag.width / 2, y_hueco))
             y_actual += frag.height + ESPACIO_VERTICAL
             
     paginas_creadas.append(pagina_actual)
@@ -251,19 +262,28 @@ def procesar_video_partitura(video_path, output_pdf_path, formato_horizontal=Tru
                 fuente_autor = cargar_fuente(RUTA_FUENTE_AUTOR, 26, 24)
                 draw_titulo.text((ANCHO_PAGINA - MARGEN_LADO, MARGEN_TECHO + 85), autor, fill=(71, 85, 105), font=fuente_autor, anchor="rm")
 
-    # Subscribe message — bigger and bolder, on every page that actually has blurred content
+    # Subscribe message — soft but legible: light rounded pill instead of a heavy
+    # black box, regular-weight font, and no emoji (the fonts we ship don't carry
+    # emoji glyphs, which was rendering as a broken tofu box with a black outline).
     if not es_premium and paginas_con_borroso:
-        fuente_footer = cargar_fuente(RUTA_FUENTE_TITULO, 34, 30)
+        fuente_footer = cargar_fuente(RUTA_FUENTE_AUTOR, 30, 26)
+        COLOR_TEXTO_FOOTER = (6, 95, 70)       # emerald oscuro, buen contraste sobre el fondo claro
+        COLOR_FONDO_FOOTER = (209, 250, 229)   # mint suave, coherente con el verde de marca
+        COLOR_BORDE_FOOTER = (167, 243, 208)
         for idx in sorted(paginas_con_borroso):
             draw = ImageDraw.Draw(paginas_creadas[idx])
-            msg = "🔒 Subscribe to Pro to unlock the full, unblurred sheet music"
-            caja = draw.textbbox((ANCHO_PAGINA // 2, ALTO_PAGINA - 55), msg, font=fuente_footer, anchor="mm")
-            padding = 14
-            draw.rectangle(
-                (caja[0] - padding, caja[1] - padding, caja[2] + padding, caja[3] + padding),
-                fill=(15, 23, 42)
+            msg = "Subscribe to Pro to unlock the full, unblurred sheet music"
+            centro = (ANCHO_PAGINA // 2, ALTO_PAGINA - 55)
+            caja = draw.textbbox(centro, msg, font=fuente_footer, anchor="mm")
+            padding_x, padding_y = 22, 14
+            draw.rounded_rectangle(
+                (caja[0] - padding_x, caja[1] - padding_y, caja[2] + padding_x, caja[3] + padding_y),
+                radius=18,
+                fill=COLOR_FONDO_FOOTER,
+                outline=COLOR_BORDE_FOOTER,
+                width=2,
             )
-            draw.text((ANCHO_PAGINA // 2, ALTO_PAGINA - 55), msg, fill=(255, 255, 255), font=fuente_footer, anchor="mm")
+            draw.text(centro, msg, fill=COLOR_TEXTO_FOOTER, font=fuente_footer, anchor="mm")
 
     # Translucent brand watermark on free-tier pages, over every other fragment
     if not es_premium and marcas_de_agua:
