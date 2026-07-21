@@ -2,7 +2,19 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SheetMusic Extractor Pro</title>
+    <style>
+        /* NUEVO: misma fuente que se usa en el PDF, para que la previsualización sea fiel */
+        @font-face {
+            font-family: 'PartituraTitulo';
+            src: url('/static/fonts/Poppins-SemiBold.ttf');
+        }
+        @font-face {
+            font-family: 'PartituraAutor';
+            src: url('/static/fonts/Poppins-Regular.ttf');
+        }
+    </style>
 </head>
 <body style="background-color:#0f172a; color:#f8fafc; font-family:sans-serif; margin:0; padding:0; min-height:100vh; display:flex; flex-direction:column;">
 
@@ -66,8 +78,17 @@
                 </div>
 
                 <div style="margin-bottom:20px;">
-                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Título de la canción (opcional)</label>
-                    <input type="text" name="titulo" placeholder="Ej: Nombre de la canción - Artista" maxlength="80" style="width:100%; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
+                    <label style="display:block; font-size:14px; margin-bottom:8px;">3. Título y autor (opcional)</label>
+                    <div style="display:flex; gap:10px; margin-bottom:12px;">
+                        <input type="text" name="titulo" id="input-titulo" placeholder="Título de la canción" maxlength="80" oninput="actualizarPreviewTitulo()" style="flex:2; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
+                        <input type="text" name="autor" id="input-autor" placeholder="Autor / artista" maxlength="50" oninput="actualizarPreviewTitulo()" style="flex:1; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
+                    </div>
+
+                    <!-- NUEVO: previsualización en vivo, con la fuente real que se usará en el PDF -->
+                    <div id="preview-titulo-caja" style="display:none; background-color:#f8fafc; border-radius:8px; padding:14px 18px; position:relative; min-height:50px;">
+                        <div id="preview-titulo-texto" style="font-family:'PartituraTitulo', sans-serif; color:#0f172a; font-size:20px; text-align:center;"></div>
+                        <div id="preview-autor-texto" style="font-family:'PartituraAutor', sans-serif; color:#475569; font-size:12px; text-align:right; margin-top:4px;"></div>
+                    </div>
                 </div>
 
                 <div style="margin-bottom:20px;">
@@ -184,6 +205,17 @@
 
             // NUEVO: mueve la preview al frame de INICIO o de FIN según el slider que hayas movido tú
             videoOculto.currentTime = (origen === 'fin') ? fin : inicio;
+        }
+        // NUEVO: previsualización en vivo del título/autor, con la misma fuente del PDF
+        function actualizarPreviewTitulo() {
+            const titulo = document.getElementById('input-titulo').value.trim();
+            const autor = document.getElementById('input-autor').value.trim();
+            const caja = document.getElementById('preview-titulo-caja');
+
+            document.getElementById('preview-titulo-texto').innerText = titulo;
+            document.getElementById('preview-autor-texto').innerText = autor;
+
+            caja.style.display = (titulo || autor) ? 'block' : 'none';
         }
     </script>
 </body>
