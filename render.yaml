@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: extractor-partituras
+    env: python
+    plan: free
+    buildCommand: >
+      apt-get update &&
+      apt-get install -y build-essential python3-dev libjpeg-dev zlib1g-dev &&
+      pip install --upgrade pip &&
+      pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: PORT
+        value: 5000
