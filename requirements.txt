@@ -1,7 +1,4 @@
 Flask==3.0.3
 opencv-python-headless==4.10.0.84
 numpy==1.26.4
-Pillow
-stripe==11.0.0
-gunicorn==22.0.0
-psycopg2-binary==2.9.10
+Pillow==10.3.0
