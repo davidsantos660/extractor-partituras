@@ -5,9 +5,15 @@ services:
     plan: free
     buildCommand: >
       apt-get update &&
-      apt-get install -y build-essential python3-dev libjpeg-dev zlib1g-dev &&
-      pip install --upgrade pip &&
-      pip install -r requirements.txt
+      apt-get install -y --no-install-recommends
+      build-essential
+      python3-dev
+      libjpeg-dev
+      zlib1g-dev
+      libwebp-dev &&
+      pip install --upgrade pip setuptools wheel &&
+      pip install --only-binary :all: Pillow opencv-python-headless numpy &&
+      pip install Flask
     startCommand: python app.py
     envVars:
       - key: PORT
