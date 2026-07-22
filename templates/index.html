@@ -3,308 +3,412 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SheetMusic Extractor Pro</title>
+    <title>SheetMusic Extractor</title>
     <style>
-        /* Same font used in the PDF, so the live preview matches the real output */
-        @font-face {
-            font-family: 'PartituraTitulo';
-            src: url('/static/fonts/Poppins-SemiBold.ttf');
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #10b981;
+            --border: #334155;
         }
-        @font-face {
-            font-family: 'PartituraAutor';
-            src: url('/static/fonts/Poppins-Regular.ttf');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 20px;
+            text-align: center;
+        }
+        main {
+            width: 100%;
+            max-width: 550px;
+            margin: auto;
+            padding: 24px;
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+        .form-group { margin-bottom: 20px; }
+        .label { display: block; font-size: 14px; margin-bottom: 8px; }
+        .upload-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 90px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            background-color: rgba(51, 65, 85, 0.3);
+        }
+        #preview-container {
+            display: none;
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        #canvas-preview { width: 100%; display: block; height: auto; }
+        .slider-box {
+            background-color: rgba(15, 23, 42, 0.4);
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .slider-control { margin-bottom: 10px; }
+        .slider-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        input[type="range"], select, input[type="text"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+        select, input[type="text"] {
+            background-color: #334155;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            color: var(--text-main);
+            outline: none;
+            font-size: 14px;
+        }
+        .title-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .title-row input:first-child { flex: 2; }
+        .title-row input:last-child { flex: 1; }
+        #title-preview-box {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 14px 18px;
+            min-height: 50px;
+        }
+        #title-preview-text {
+            color: #0f172a;
+            font-size: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+        #author-preview-text {
+            color: #475569;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 4px;
+        }
+        .btn-primary {
+            width: 100%;
+            background-color: var(--accent);
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            width: 100%;
+            background-color: transparent;
+            color: var(--text-main);
+            font-size: 15px;
+            font-weight: 600;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            color: var(--accent);
+            font-weight: 600;
+            padding: 10px;
+            animation: pulse 1.5s infinite;
+        }
+        #error-box {
+            display: none;
+            text-align: center;
+            color: #f87171;
+            font-weight: 600;
+            padding: 10px;
+            font-size: 14px;
+        }
+        #success-screen {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        footer {
+            padding: 12px;
+            text-align: center;
+            font-size: 11px;
+            color: #475569;
+            background-color: #020617;
         }
     </style>
 </head>
-<body style="background-color:#0f172a; color:#f8fafc; font-family:sans-serif; margin:0; padding:0; min-height:100vh; display:flex; flex-direction:column;">
-
-    <header style="background-color:#1e293b; padding:16px 32px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
-        <h1 style="font-size:22px; margin:0;">🎵 SheetMusic <span style="color:#10b981;">Pro</span></h1>
-        <div style="display:flex; align-items:center; gap:16px;">
-            {% if session.get('user_email') %}
-                <span>{{ session.get('user_email') }}</span>
-                {% if es_pro %}
-                    <span style="background-color:#10b981; color:#0f172a; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">PRO MEMBER</span>
-                {% elif creditos > 0 %}
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Go Pro (€0.99/mo)</a>
-                    <span style="background-color:#3b82f6; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} CREDITS</span>
-                {% else %}
-                    <a href="/comprar/suscripcion" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Go Pro (€0.99/mo)</a>
-                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">FREE ACCOUNT ({{ creditos }} CREDITS)</span>
-                {% endif %}
-                <a href="/logout" style="color:#f43f5e; text-decoration:none; margin-left:8px; font-size:14px;">Sign Out</a>
-            {% else %}
-                {% if creditos > 0 %}
-                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">{{ creditos }} FREE CREDITS</span>
-                {% else %}
-                    <span style="background-color:#475569; color:#fff; padding:4px 8px; border-radius:20px; font-size:12px; font-weight:bold;">0 FREE CREDITS</span>
-                {% endif %}
-                <a href="/login" style="color:#f8fafc; text-decoration:none; margin-right:16px; font-size:14px;">Log In</a>
-                <a href="/registro" style="background-color:#10b981; color:#0f172a; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px;">Sign Up</a>
-            {% endif %}
-        </div>
-    </header>
-
-    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
-        <main style="width:100%; max-width:550px; padding:24px; background-color:#1e293b; border-radius:16px; border:1px solid #334155; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
-            <form id="form-partitura" action="/" method="POST" enctype="multipart/form-data">
-                <div id="pasos-formulario">
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block; font-size:14px; margin-bottom:8px;">1. Upload your sheet music video</label>
-                        <div style="border:2px dashed #334155; padding:20px; text-align:center; border-radius:12px; cursor:pointer; background-color:rgba(51,65,85,0.3);" onclick="document.getElementById('video-input').click()">
-                            <p id="texto-subida" style="margin:0; font-size:14px; color:#94a3b8;">Click to select your video file</p>
-                            <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="procesarVideoLocal(event)" />
-                        </div>
-                    </div>
-
-                    <div id="contenedor-preview" style="display:none; width:100%; border-radius:12px; border:1px solid #334155; margin-bottom:16px; overflow:hidden;">
-                        <canvas id="canvas-preview" style="width:100%; display:block; height:auto;"></canvas>
-                    </div>
-
-                    <div id="bloque-recorte-duracion" style="display:none; margin-bottom:20px;">
-                        <label style="display:block; font-size:14px; margin-bottom:8px;">2. Trim the duration (skip intro/outro)</label>
-                        <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
-                            <div style="margin-bottom:10px;">
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                    <span>Start</span><span id="txt-inicio">0:00</span>
-                                </div>
-                                <input type="range" id="rango_inicio" min="0" max="100" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('inicio')">
-                            </div>
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
-                                    <span>End</span><span id="txt-fin">0:00</span>
-                                </div>
-                                <input type="range" id="rango_fin" min="0" max="100" value="100" style="width:100%; accent-color:#10b981;" oninput="actualizarRecorteDuracion('fin')">
-                            </div>
-                        </div>
-                        <input type="hidden" name="inicio_seg" id="input_inicio_seg" value="0">
-                        <input type="hidden" name="fin_seg" id="input_fin_seg" value="">
-                    </div>
-
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block; font-size:14px; margin-bottom:8px;">3. Adjust the sheet music area</label>
-                        <div style="background-color:rgba(15,23,42,0.4); padding:14px; border-radius:12px; border:1px solid #334155;">
-                            <div style="margin-bottom:10px;">
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Top</span><span><span id="val-sup">0</span>%</span></div>
-                                <input type="range" name="corte_sup" id="corte_sup" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
-                            </div>
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Bottom</span><span><span id="val-inf">0</span>%</span></div>
-                                <input type="range" name="corte_inf" id="corte_inf" min="0" max="90" value="0" style="width:100%; accent-color:#10b981;" oninput="actualizarCorte()">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block; font-size:14px; margin-bottom:8px;">4. Output format</label>
-                        <select name="formato" style="width:100%; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none;">
-                            <option value="1" selected>Vertical (1 per row - best for printing or a stand)</option>
-                            <option value="2">Horizontal (2 per row - best for computer screens)</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block; font-size:14px; margin-bottom:8px;">5. Song title and author (optional)</label>
-                        <div style="display:flex; gap:10px; margin-bottom:12px;">
-                            <input type="text" name="titulo" id="input-titulo" placeholder="Song title" maxlength="80" oninput="actualizarPreviewTitulo()" style="flex:2; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
-                            <input type="text" name="autor" id="input-autor" placeholder="Author / artist" maxlength="50" oninput="actualizarPreviewTitulo()" style="flex:1; box-sizing:border-box; background-color:#334155; border:1px solid #334155; border-radius:12px; padding:10px; color:#f8fafc; outline:none; font-size:14px;">
-                        </div>
-
-                        <!-- Live preview, using the real font/layout that will be used in the PDF -->
-                        <div id="preview-titulo-caja" style="background-color:#f8fafc; border-radius:8px; padding:14px 18px; position:relative; min-height:50px;">
-                            <div id="preview-titulo-texto" style="font-family:'PartituraTitulo', sans-serif; color:#0f172a; font-size:20px; text-align:center;"></div>
-                            <div id="preview-marca-bajo-titulo" style="font-family:'PartituraAutor', sans-serif; color:#94a3b8; font-size:11px; text-align:center; font-style:italic;">Music Sheet Xtractor</div>
-                            <div id="preview-autor-texto" style="font-family:'PartituraAutor', sans-serif; color:#475569; font-size:12px; text-align:right; margin-top:4px;"></div>
-                            <div id="preview-marca-bajo-autor" style="font-family:'PartituraAutor', sans-serif; color:#94a3b8; font-size:10px; text-align:right; font-style:italic;"></div>
-                        </div>
-                    </div>
-
-                    <button type="submit" id="btn-submit" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🚀 Process and Download PDF</button>
-                    <div id="loading" style="text-align:center; color:#10b981; font-weight:600; padding:10px; display:none;">⏳ Processing your video... long videos can take a few minutes, feel free to leave this tab open.</div>
-                    <div id="error-box" style="display:none; text-align:center; color:#f87171; font-weight:600; padding:10px; font-size:14px;"></div>
+<body>
+    <header><h1>🎵 SheetMusic Extractor</h1></header>
+    <main>
+        <form id="sheet-form" enctype="multipart/form-data">
+            <div id="form-steps">
+                <div class="form-group">
+                    <label class="label">1. Upload your sheet music video</label>
+                    <label class="upload-zone">
+                        <p id="upload-text">Click to choose your video file</p>
+                        <input type="file" id="video-input" name="video" accept=".mp4,.mkv,.avi" style="display:none;" required onchange="handleVideoUpload(event)" />
+                    </label>
                 </div>
 
-                <!-- Shown after a successful PDF download, instead of the form -->
-                <div id="pantalla-exito" style="display:none; text-align:center; padding:20px 0;">
-                    <p style="font-size:40px; margin:0;">✅</p>
-                    <p style="font-size:16px; font-weight:600; margin:10px 0 4px;">Your PDF is ready and downloading!</p>
-                    <p style="font-size:13px; color:#94a3b8; margin:0 0 20px;">Want to extract another song?</p>
-                    <button type="button" onclick="generarOtraVez()" style="width:100%; background-color:#10b981; color:#0f172a; font-size:16px; font-weight:700; padding:12px; border:none; border-radius:12px; cursor:pointer;">🔁 Generate another sheet</button>
+                <div id="preview-container"><canvas id="canvas-preview"></canvas></div>
+
+                <div id="duration-trim-block" class="form-group" style="display:none;">
+                    <label class="label">2. Trim the video (skip intro or outro)</label>
+                    <div class="slider-box">
+                        <div class="slider-control">
+                            <div class="slider-info"><span>Start</span><span id="txt-start">0:00</span></div>
+                            <input type="range" id="range-start" min="0" max="100" value="0" oninput="updateDurationTrim('start')">
+                        </div>
+                        <div class="slider-control" style="margin-bottom:0;">
+                            <div class="slider-info"><span>End</span><span id="txt-end">0:00</span></div>
+                            <input type="range" id="range-end" min="0" max="100" value="100" oninput="updateDurationTrim('end')">
+                        </div>
+                    </div>
+                    <input type="hidden" name="inicio_seg" id="input-start-sec" value="0">
+                    <input type="hidden" name="fin_seg" id="input-end-sec" value="">
                 </div>
-            </form>
-        </main>
-    </div>
 
-    <footer style="padding:16px; text-align:center; font-size:11px; color:#475569; background-color:#020617; border-top:1px solid #1e293b;">Made by musicians, for musicians.</footer>
-    <video id="video-oculto" style="display:none;"></video>
+                <div class="form-group">
+                    <label class="label">3. Adjust the sheet music area</label>
+                    <div class="slider-box">
+                        <div class="slider-control">
+                            <div class="slider-info"><span>Top</span><span><span id="val-top">0</span>%</span></div>
+                            <input type="range" name="corte_sup" id="crop-top" min="0" max="80" value="0" oninput="updateCrop()">
+                        </div>
+                        <div class="slider-control" style="margin-bottom:0;">
+                            <div class="slider-info"><span>Bottom</span><span><span id="val-bottom">0</span>%</span></div>
+                            <input type="range" name="corte_inf" id="crop-bottom" min="0" max="80" value="0" oninput="updateCrop()">
+                        </div>
+                    </div>
+                </div>
 
+                <div class="form-group">
+                    <label class="label">4. Output format</label>
+                    <select name="formato">
+                        <option value="1" selected>Vertical (1 per row - best for printing)</option>
+                        <option value="2">Horizontal (2 per row - best for computer screens)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="label">5. Song title and author (optional)</label>
+                    <div class="title-row">
+                        <input type="text" name="titulo" id="input-title" placeholder="Song title" maxlength="80" oninput="updateTitlePreview()">
+                        <input type="text" name="autor" id="input-author" placeholder="Author / artist" maxlength="50" oninput="updateTitlePreview()">
+                    </div>
+                    <div id="title-preview-box">
+                        <div id="title-preview-text">Song title</div>
+                        <div id="author-preview-text"></div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-submit" class="btn-primary">🚀 Process and Download PDF</button>
+                <div id="loading">⏳ Processing your video... Long videos may take a minute.</div>
+                <div id="error-box"></div>
+            </div>
+
+            <div id="success-screen">
+                <p style="font-size:40px; margin:0;">✅</p>
+                <p style="font-size:16px; font-weight:600; margin:10px 0 4px;">Your PDF is ready!</p>
+                <p style="font-size:13px; color:#94a3b8; margin:0 0 20px;">The download should start automatically.</p>
+                <button type="button" class="btn-primary" onclick="generateAgain()">🔁 Generate another sheet</button>
+                <button type="button" class="btn-secondary" onclick="backToStart()">↩ Back to start</button>
+            </div>
+        </form>
+    </main>
+    <footer>Made by musicians, for musicians.</footer>
+    <video id="hidden-video" style="display:none;"></video>
     <script>
-        let videoOculto = document.getElementById('video-oculto');
+        let hiddenVideo = document.getElementById('hidden-video');
         let canvas = document.getElementById('canvas-preview');
         let ctx = canvas.getContext('2d');
-        let fotogramaCargado = false;
+        let frameLoaded = false;
 
-        function procesarVideoLocal(e) {
-            const f = e.target.files; if (!f || f.length === 0) return;
-            document.getElementById('texto-subida').innerText = f[0].name;
-            videoOculto.src = URL.createObjectURL(f[0]); videoOculto.load();
-            videoOculto.onloadedmetadata = () => {
-                videoOculto.currentTime = 15;
+        function handleVideoUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            const file = files[0];
+            document.getElementById('upload-text').innerText = file.name;
+            hiddenVideo.src = URL.createObjectURL(file);
+            hiddenVideo.load();
+            hiddenVideo.onloadedmetadata = function() {
+                hiddenVideo.currentTime = 15;
 
-                document.getElementById('bloque-recorte-duracion').style.display = 'block';
-                document.getElementById('rango_inicio').value = 0;
-                document.getElementById('rango_fin').value = 100;
-                document.getElementById('input_inicio_seg').value = 0;
-                document.getElementById('input_fin_seg').value = videoOculto.duration.toFixed(2);
-                document.getElementById('txt-fin').innerText = formatearTiempo(videoOculto.duration);
+                document.getElementById('duration-trim-block').style.display = 'block';
+                document.getElementById('range-start').value = 0;
+                document.getElementById('range-end').value = 100;
+                document.getElementById('input-start-sec').value = 0;
+                document.getElementById('input-end-sec').value = hiddenVideo.duration.toFixed(2);
+                document.getElementById('txt-end').innerText = formatTime(hiddenVideo.duration);
             };
-            videoOculto.onseeked = () => {
-                canvas.width = videoOculto.videoWidth; canvas.height = videoOculto.videoHeight;
-                document.getElementById('contenedor-preview').style.display = 'block';
-                fotogramaCargado = true; dibujarGuias();
+            hiddenVideo.onseeked = function() {
+                canvas.width = hiddenVideo.videoWidth;
+                canvas.height = hiddenVideo.videoHeight;
+                document.getElementById('preview-container').style.display = 'block';
+                frameLoaded = true;
+                drawGuides();
             };
         }
 
-        function dibujarGuias() {
-            if (!fotogramaCargado) return;
-            ctx.drawImage(videoOculto, 0, 0, canvas.width, canvas.height);
-            let yS = canvas.height * (parseFloat(document.getElementById('corte_sup').value) / 100);
-            let yI = canvas.height * ((100 - parseFloat(document.getElementById('corte_inf').value)) / 100);
-            ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; ctx.fillRect(0, 0, canvas.width, yS); ctx.fillRect(0, yI, canvas.width, canvas.height - yI);
-            ctx.strokeStyle = "#ef4444"; ctx.lineWidth = Math.max(4, canvas.height * 0.006);
+        function drawGuides() {
+            if (!frameLoaded) return;
+            ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+            let yTop = canvas.height * (parseFloat(document.getElementById('crop-top').value) / 100);
+            let yBottom = canvas.height * ((100 - parseFloat(document.getElementById('crop-bottom').value)) / 100);
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(0, 0, canvas.width, yTop);
+            ctx.fillRect(0, yBottom, canvas.width, canvas.height - yBottom);
+            ctx.strokeStyle = "#ef4444";
+            ctx.lineWidth = Math.max(4, canvas.height * 0.006);
             ctx.setLineDash([canvas.width * 0.015, canvas.width * 0.015]);
-            ctx.beginPath(); ctx.moveTo(0, yS); ctx.lineTo(canvas.width, yS); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, yI); ctx.lineTo(canvas.width, yI); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, yTop);
+            ctx.lineTo(canvas.width, yTop);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, yBottom);
+            ctx.lineTo(canvas.width, yBottom);
+            ctx.stroke();
         }
 
-        function actualizarCorte() {
-            document.getElementById('val-sup').innerText = document.getElementById('corte_sup').value;
-            document.getElementById('val-inf').innerText = document.getElementById('corte_inf').value;
-            dibujarGuias();
+        function updateCrop() {
+            document.getElementById('val-top').innerText = document.getElementById('crop-top').value;
+            document.getElementById('val-bottom').innerText = document.getElementById('crop-bottom').value;
+            drawGuides();
         }
 
-        function formatearTiempo(seg) {
-            const m = Math.floor(seg / 60);
-            const s = Math.floor(seg % 60).toString().padStart(2, '0');
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
             return `${m}:${s}`;
         }
 
-        function actualizarRecorteDuracion(origen) {
-            const duracion = videoOculto.duration;
-            if (!duracion || isNaN(duracion)) return;
+        function updateDurationTrim(source) {
+            const duration = hiddenVideo.duration;
+            if (!duration || isNaN(duration)) return;
 
-            let inicio = parseFloat(document.getElementById('rango_inicio').value) / 100 * duracion;
-            let fin = parseFloat(document.getElementById('rango_fin').value) / 100 * duracion;
+            let start = parseFloat(document.getElementById('range-start').value) / 100 * duration;
+            let end = parseFloat(document.getElementById('range-end').value) / 100 * duration;
 
-            if (inicio >= fin) {
-                if (origen === 'fin') {
-                    fin = Math.min(duracion, inicio + 1);
-                    document.getElementById('rango_fin').value = (fin / duracion) * 100;
+            if (start >= end) {
+                if (source === 'end') {
+                    end = Math.min(duration, start + 1);
+                    document.getElementById('range-end').value = (end / duration) * 100;
                 } else {
-                    inicio = Math.max(0, fin - 1);
-                    document.getElementById('rango_inicio').value = (inicio / duracion) * 100;
+                    start = Math.max(0, end - 1);
+                    document.getElementById('range-start').value = (start / duration) * 100;
                 }
             }
 
-            document.getElementById('txt-inicio').innerText = formatearTiempo(inicio);
-            document.getElementById('txt-fin').innerText = formatearTiempo(fin);
-            document.getElementById('input_inicio_seg').value = inicio.toFixed(2);
-            document.getElementById('input_fin_seg').value = fin.toFixed(2);
+            document.getElementById('txt-start').innerText = formatTime(start);
+            document.getElementById('txt-end').innerText = formatTime(end);
+            document.getElementById('input-start-sec').value = start.toFixed(2);
+            document.getElementById('input-end-sec').value = end.toFixed(2);
 
-            // Browsers sometimes show a black frame when seeking to the exact 0.0 mark
-            // (the first frame isn't decoded yet) — nudge slightly forward just for the preview.
-            const tiempoParaVerPreview = (origen === 'fin') ? fin : Math.max(inicio, 0.08);
-            videoOculto.currentTime = tiempoParaVerPreview;
+            const previewTime = (source === 'end') ? end : Math.max(start, 0.08);
+            hiddenVideo.currentTime = previewTime;
         }
 
-        // Live preview of title/author, matching the real PDF layout:
-        // - With a title: the brand name sits below the author (top-right).
-        // - Without a title: the brand name becomes a small subtitle instead.
-        function actualizarPreviewTitulo() {
-            const titulo = document.getElementById('input-titulo').value.trim();
-            const autor = document.getElementById('input-autor').value.trim();
-
-            document.getElementById('preview-titulo-texto').innerText = titulo || 'Song title';
-            document.getElementById('preview-autor-texto').innerText = autor;
-
-            const marcaBajoTitulo = document.getElementById('preview-marca-bajo-titulo');
-            const marcaBajoAutor = document.getElementById('preview-marca-bajo-autor');
-
-            if (titulo) {
-                marcaBajoTitulo.style.display = 'none';
-                marcaBajoAutor.style.display = 'block';
-                marcaBajoAutor.innerText = 'Music Sheet Xtractor';
-            } else {
-                marcaBajoTitulo.style.display = 'block';
-                marcaBajoAutor.style.display = 'none';
-            }
+        function updateTitlePreview() {
+            const title = document.getElementById('input-title').value.trim();
+            const author = document.getElementById('input-author').value.trim();
+            document.getElementById('title-preview-text').innerText = title || 'Song title';
+            document.getElementById('author-preview-text').innerText = author;
         }
-        actualizarPreviewTitulo();
+        updateTitlePreview();
 
-        // NUEVO: el vídeo ya no se procesa dentro de una única petición HTTP larga
-        // (Render, como la mayoría de plataformas de hosting, corta las peticiones
-        // que tardan demasiado). Ahora /procesar responde al instante con un job_id,
-        // y vamos preguntando en /estado/<job_id> cada pocos segundos hasta que
-        // el PDF esté listo para descargar.
-        async function arrancarTrabajo(datos) {
-            const respuesta = await fetch('/procesar', { method: 'POST', body: datos });
-            if (!respuesta.ok) {
-                let texto = '';
-                try { const j = await respuesta.json(); texto = j.error || ''; } catch (e) {}
-                throw new Error(texto || 'Something went wrong while starting the process.');
-            }
-            const datosRespuesta = await respuesta.json();
-            return datosRespuesta.job_id;
-        }
-
-        function esperar(ms) {
-            return new Promise((resolve) => setTimeout(resolve, ms));
-        }
-
-        async function esperarTrabajo(jobId) {
-            while (true) {
-                await esperar(3000);
-                const respuesta = await fetch('/estado/' + jobId);
-                const datos = await respuesta.json();
-                if (datos.estado === 'listo') return;
-                if (datos.estado === 'error') {
-                    throw new Error(datos.mensaje || 'Something went wrong while processing the video.');
-                }
-                // si sigue "procesando", seguimos preguntando
-            }
-        }
-
-        document.getElementById('form-partitura').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
+        function showLoading() {
             document.getElementById('btn-submit').style.display = 'none';
             document.getElementById('loading').style.display = 'block';
             document.getElementById('error-box').style.display = 'none';
+        }
 
-            const datos = new FormData(this);
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('btn-submit').style.display = 'block';
+        }
 
-            try {
-                const jobId = await arrancarTrabajo(datos);
-                await esperarTrabajo(jobId);
+        function showSuccessScreen() {
+            document.getElementById('form-steps').style.display = 'none';
+            document.getElementById('success-screen').style.display = 'block';
+        }
 
-                document.getElementById('pasos-formulario').style.display = 'none';
-                document.getElementById('pantalla-exito').style.display = 'block';
-
-                // La descarga se dispara con una navegación normal, para que el
-                // navegador la gestione de forma nativa (cabecera de adjunto).
-                window.location.href = '/descargar/' + jobId;
-            } catch (error) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('btn-submit').style.display = 'block';
-                const caja = document.getElementById('error-box');
-                caja.innerText = '⚠️ ' + error.message;
-                caja.style.display = 'block';
-            }
-        });
-
-        function generarOtraVez() {
+        function generateAgain() {
             window.location.reload();
         }
+
+        function backToStart() {
+            window.location.href = '/';
+        }
+
+        document.getElementById('sheet-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            showLoading();
+
+            try {
+                const response = await fetch('/procesar', {
+                    method: 'POST',
+                    body: new FormData(this),
+                });
+
+                if (!response.ok) {
+                    let message = 'Something went wrong while processing your video.';
+                    try {
+                        const data = await response.json();
+                        if (data.error) message = data.error;
+                    } catch (e) {}
+                    throw new Error(message);
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'sheet_music.pdf';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+
+                hideLoading();
+                showSuccessScreen();
+            } catch (error) {
+                hideLoading();
+                const errorBox = document.getElementById('error-box');
+                errorBox.innerText = '⚠️ ' + error.message;
+                errorBox.style.display = 'block';
+            }
+        });
     </script>
 </body>
 </html>
